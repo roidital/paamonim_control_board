@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "paamonim"
+version = "0.1.0"
+description = ""
+authors = ["Roi Dital <roi.dital@cyberark.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+selenium = "^4.20.0"
+openpyxl = "^3.1.2"
+easygui = "^0.98.3"
+pyqt5 = "^5.15.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
