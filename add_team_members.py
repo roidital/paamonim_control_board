@@ -3,14 +3,14 @@ import re
 from typing import Final
 import openpyxl
 from PyQt5.QtWidgets import QApplication
-
+import datetime
 from login.login import do_login
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment, Color
 from selenium.webdriver.common.by import By
 from time import sleep
 from collections import defaultdict
 from common_utils import normalize_string, set_cell_value, filter_unit_name_no_search_button, BOLD_FONT, CHECK_MARK, \
-    LIGHT_BLUE_FILL, filter_unit_name_with_search_button, FamilyStatus
+    LIGHT_BLUE_FILL, filter_unit_name_with_search_button, FamilyStatus, YELLOW_FILL
 
 # todo: move all constants to a separate constants file
 URL_ACTIVE_TEAM_MEMBERS: Final[str] = 'https://app.paamonim.org.il/contacts/paam_index'
@@ -18,8 +18,10 @@ ULR_VACATION_TEAM_MEMBERS: Final[str] = 'https://app.paamonim.org.il/contacts/pa
 URL_FAMILIES_STATUS_PAGE: Final[str] = 'https://app.paamonim.org.il/budgets'
 EXCEL_FILENAME: Final[str] = "cockpit.xlsx"
 HEADER_NAME: Final[str] = "שם"
-SHEET_NAME: Final[str] = "ראשי"
-FIRST_DATA_ROW_NUM: Final[int] = 6
+MAIN_SHEET_NAME: Final[str] = "ראשי"
+FAMILIES_SHEET_NAME: Final[str] = "דוח משפחות"
+MAIN_SHEET_FIRST_DATA_ROW_NUM: Final[int] = 6
+FAMILIES_SHEET_FIRST_ROW_NUM: Final[int] = 3
 HEADERS_ROW_NUM: Final[int] = 5
 
 THIN_BORDER: Final[Border] = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'),
@@ -53,19 +55,18 @@ def __find_header_index(sheet, header_name):
     return None
 
 
-# todo: add last column value instead of hard coded '7'
-def __apply_border_to_team_table(sheet, start_row, end_row, column_index):
-    sheet.cell(row=start_row, column=column_index).border = left_top_border
-    sheet.cell(row=start_row, column=column_index + 7).border = right_top_border
-    for column in range(column_index + 1, column_index + 7):
+def __apply_border_to_team_table(sheet, start_row, end_row, first_column_index, last_column_shift):
+    sheet.cell(row=start_row, column=first_column_index).border = left_top_border
+    sheet.cell(row=start_row, column=first_column_index + last_column_shift).border = right_top_border
+    for column in range(first_column_index + 1, first_column_index + last_column_shift):
         sheet.cell(row=start_row, column=column).border = top_border
         sheet.cell(row=end_row, column=column).border = bottom_border
 
-    sheet.cell(row=end_row, column=column_index).border = left_bottom_border
-    sheet.cell(row=end_row, column=column_index + 7).border = right_bottom_border
+    sheet.cell(row=end_row, column=first_column_index).border = left_bottom_border
+    sheet.cell(row=end_row, column=first_column_index + last_column_shift).border = right_bottom_border
     for row in range(start_row + 1, end_row):
-        sheet.cell(row=row, column=column_index).border = left_border
-        sheet.cell(row=row, column=column_index + 7).border = right_border
+        sheet.cell(row=row, column=first_column_index).border = left_border
+        sheet.cell(row=row, column=first_column_index + last_column_shift).border = right_border
 
 
 def update_wb_active_team_members(wb, sheet_name, start_row, header_name, team_list):
@@ -195,7 +196,6 @@ def update_wb_vacation_team_members(wb, sheet_name, header_name, start_row, team
 
 
 def update_wb_families_status(wb, sheet_name, header_name, start_row, family_count_column_shift, family_list_column_shift, tutor_to_families):
-    # Select the active sheet
     sheet = wb[sheet_name]
 
     # Find the column index of the header
@@ -233,8 +233,77 @@ def update_wb_families_status(wb, sheet_name, header_name, start_row, family_cou
     sheet.column_dimensions[column_letter].width = sheet.column_dimensions[column_letter].width * 2
 
 
+def create_families_sheet(wb, sheet_name, browser, start_row, tutor_to_families):
+    sheet = wb[sheet_name]
+
+    rows = browser.find_elements(By.XPATH, './/tr[starts-with(@id, "family_")]')
+
+    i = start_row
+    for (tutor, families) in tutor_to_families.items():
+        # create a header line for this tutor
+        sheet.merge_cells(start_row=i, start_column=6, end_row=i, end_column=19)
+        merged_cell = sheet.cell(row=i, column=6)
+        set_cell_value(merged_cell, tutor, fill=LIGHT_BLUE_FILL)
+        i += 1
+
+        # for each family of this tutor search for the family name in the html and copy relevant fields to excel
+        for family in families:
+            # find the row in the html that contains the family name
+            for row in rows:
+                cells = row.find_elements(By.TAG_NAME, "td")
+                if family[0] in cells[0].text:
+                    # copy the row to the excel sheet
+                    row_data = [cells[0].text, cells[1].text, cells[2].text, cells[12].text,
+                                cells[13].text, cells[14].text, cells[7].text, cells[15].text, cells[9].text,
+                                cells[11].text, cells[10].text, cells[8].text, cells[6].text]
+                    # write row_data to the excel at row
+                    for col, cell in enumerate(row_data, start=6):
+                        set_cell_value(sheet.cell(row=i, column=col), cell)
+                        # Adjust the width of the column to text length #todo: put this adjustment into a function
+                        column_letter = openpyxl.utils.get_column_letter(col)
+                        if len(sheet.cell(i, col).value) > sheet.column_dimensions[column_letter].width:
+                            sheet.column_dimensions[column_letter].width = len(sheet.cell(i, col).value)
+                    num_skip_lines = write_family_alerts(cells, sheet, i)
+                    i += num_skip_lines if num_skip_lines > 0 else 1
+                    break
+    return i
+
+
+def write_family_alerts(cells, sheet, row):
+    alerts = []
+    if not cells[8].text and int(cells[6].text.split()[0]) > 45:
+        alerts.append("ליווי בן יותר מ-45 יום ועדיין ללא תקציב ")
+    if not cells[12].text.strip():
+        alerts.append("אין פגישה אחרונה בתיק")
+    else:
+        # parse the date string
+        last_meeting_date = datetime.datetime.strptime(cells[12].text.strip(), "%d-%m-%y")
+        # get the current date
+        current_date = datetime.datetime.now()
+        # get the current month and the previous month
+        current_month = current_date.month
+        previous_month = current_month - 1 if current_month != 1 else 12
+        # if the last meeting date's month is not the same as the current month or the previous month, print the alert
+        if last_meeting_date.month != current_month and last_meeting_date.month != previous_month:
+            alerts.append(
+                f'לא התקיימה פגישה בחודש הנוכחי או הקודם')
+    if not cells[13].text.strip():
+        alerts.append("לא נקבעה הפגישה הבאה")
+
+    for i, alert in enumerate(alerts, start=1):
+        if i > 1:
+            sheet.insert_rows(row + i - 1)
+        set_cell_value(sheet.cell(row=row + i - 1, column=19), alert, fill=YELLOW_FILL)
+        # Adjust the width of the column to text length #todo: put this adjustment into a function
+        column_letter = openpyxl.utils.get_column_letter(19)
+        if len(sheet.cell(row + i - 1, 19).value) > sheet.column_dimensions[column_letter].width:
+            sheet.column_dimensions[column_letter].width = len(sheet.cell(row+i-1, 19).value)
+
+    print(f'### alerts for family {cells[0].text}: {alerts}')
+    return len(alerts)
+
+
 def apply_borders_to_all_teams(wb, sheet_name, header_name, start_row, team_list):
-    # Select the active sheet
     sheet = wb[sheet_name]
 
     # Find the column index of the header
@@ -247,7 +316,7 @@ def apply_borders_to_all_teams(wb, sheet_name, header_name, start_row, team_list
                                                                                        column_index)
 
         # Apply border to the team table
-        __apply_border_to_team_table(sheet, team_leader_row, last_team_member_row, column_index)
+        __apply_border_to_team_table(sheet, team_leader_row, last_team_member_row, column_index, 7)
 
 
 def insert_totals(wb, sheet_name, start_row, header_name):
@@ -304,31 +373,38 @@ def main():
     print(f'active team list: {active_team_list}')
 
     # add active team members to the excel file
-    update_wb_active_team_members(wb, SHEET_NAME, FIRST_DATA_ROW_NUM, HEADER_NAME, active_team_list)
+    update_wb_active_team_members(wb, MAIN_SHEET_NAME, MAIN_SHEET_FIRST_DATA_ROW_NUM, HEADER_NAME, active_team_list)
 
     vacation_team_list = retrieve_team_list(browser, unit_name, ULR_VACATION_TEAM_MEMBERS)
     print(f'vacation team list: {vacation_team_list}')
 
     # add vacation team members to the excel file
-    update_wb_vacation_team_members(wb, SHEET_NAME, HEADER_NAME, FIRST_DATA_ROW_NUM, vacation_team_list)
+    update_wb_vacation_team_members(wb, MAIN_SHEET_NAME, HEADER_NAME, MAIN_SHEET_FIRST_DATA_ROW_NUM, vacation_team_list)
 
     tutor_to_families = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE, FamilyStatus.ACTIVE)
     print(f'active families list: {tutor_to_families}')
 
     # add the amount of active families + links (per tutor) to the excel file
-    update_wb_families_status(wb, SHEET_NAME, HEADER_NAME, FIRST_DATA_ROW_NUM,
+    update_wb_families_status(wb, MAIN_SHEET_NAME, HEADER_NAME, MAIN_SHEET_FIRST_DATA_ROW_NUM,
                               5, 6, tutor_to_families)
 
-    tutor_to_families = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE, FamilyStatus.READY_TO_START)
-    print(f'ready to start families list: {tutor_to_families}')
+    tutor_to_ready_families = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE, FamilyStatus.READY_TO_START)
+    print(f'ready to start families list: {tutor_to_ready_families}')
 
-    update_wb_families_status(wb, SHEET_NAME, HEADER_NAME, FIRST_DATA_ROW_NUM,3, 4, tutor_to_families)
+    update_wb_families_status(wb, MAIN_SHEET_NAME, HEADER_NAME, MAIN_SHEET_FIRST_DATA_ROW_NUM, 3, 4, tutor_to_ready_families)
 
-    insert_totals(wb, SHEET_NAME, FIRST_DATA_ROW_NUM, HEADER_NAME)
+    insert_totals(wb, MAIN_SHEET_NAME, MAIN_SHEET_FIRST_DATA_ROW_NUM, HEADER_NAME)
 
     # apply borders to all team tables
-    apply_borders_to_all_teams(wb, SHEET_NAME, HEADER_NAME, FIRST_DATA_ROW_NUM,
+    apply_borders_to_all_teams(wb, MAIN_SHEET_NAME, HEADER_NAME, MAIN_SHEET_FIRST_DATA_ROW_NUM,
                                {**active_team_list, **vacation_team_list})
+
+    # to reset the checkboxes checked by previous steps
+    browser.get(URL_FAMILIES_STATUS_PAGE)
+    filter_unit_name_with_search_button(browser, unit_name)
+
+    num_of_table_rows = create_families_sheet(wb, FAMILIES_SHEET_NAME, browser, FAMILIES_SHEET_FIRST_ROW_NUM, tutor_to_families)
+    __apply_border_to_team_table(wb[FAMILIES_SHEET_NAME], 1, num_of_table_rows-1, 6, 13)
 
     save_workbook(wb)
     print(f'### DONE')

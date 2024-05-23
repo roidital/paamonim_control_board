@@ -13,6 +13,7 @@ from enum import Enum
 CHECK_MARK = u'\u2714'
 BOLD_FONT: Final[Font] = Font(bold=True, size=14)
 LIGHT_BLUE_FILL: Final[PatternFill] = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+YELLOW_FILL: Final[PatternFill] = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
 app = QApplication([])  # QApplication instance is required for QMessageBox
 
 
