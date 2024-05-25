@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-size: 40px; /* Increase the font size */
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        form {
+            text-align: center; /* Center the text inside the form */
+        }
+        label {
+            color: blue; /* Color the text of the labels in blue */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <form method="POST" action="/login">
+            <label for="username">מהו שם המשתמש שלך בפעמונים</label><br>
+            <input type="text" id="username" name="username"><br>
+            <label for="password">הכנס/י את הסיסמא שלך בפעמונים</label><br>
+            <input type="password" id="password" name="password"><br>
+            <label for="unit_name">'מה שמך כפי שהוא מופיע במערכת, למשל עבור 'מרכז שרון - רועי דיטל' פשוט רשום 'רועי דיטל</label><br>
+            <input type="text" id="unit_name" name="unit_name"><br>
+            <input type="submit" value="Submit">
+        </form>
+        <img src="{{ url_for('static', filename='paamonim_logo.jpg') }}" alt="My Photo" width="300" height="300">
+    </div>
+</body>
+</html>

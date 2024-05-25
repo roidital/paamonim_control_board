@@ -4,13 +4,17 @@ from typing import Final
 import openpyxl
 from PyQt5.QtWidgets import QApplication
 import datetime
-from login.login import do_login
+from login.login import _do_login
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment, Color
 from selenium.webdriver.common.by import By
 from time import sleep
 from collections import defaultdict
 from common_utils import normalize_string, set_cell_value, filter_unit_name_no_search_button, BOLD_FONT, CHECK_MARK, \
     LIGHT_BLUE_FILL, filter_unit_name_with_search_button, FamilyStatus, YELLOW_FILL
+from flask import send_file, session
+from io import BytesIO
+import base64
+import tempfile
 
 # todo: move all constants to a separate constants file
 URL_ACTIVE_TEAM_MEMBERS: Final[str] = 'https://app.paamonim.org.il/contacts/paam_index'
@@ -153,8 +157,21 @@ def init_workbook(excel_filename):
 
 
 def save_workbook(wb):
-    # Save the changes
-    wb.save(EXCEL_FILENAME)
+    #wb.save(EXCEL_FILENAME)
+
+    # excel_file = BytesIO()
+    # wb.save(excel_file)
+    # excel_file.seek(0)
+    # # Encode the BytesIO object to a base64 string before storing it in the session
+    # session['excel_file'] = base64.b64encode(excel_file.read()).decode('utf-8')
+
+
+    # Create a temporary file
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    # Save the workbook to the temporary file
+    wb.save(temp_file.name)
+    # Store the temporary file's name in the session
+    session['temp_file'] = temp_file.name
 
 
 def __find_first_and_last_team_member_rows(sheet, start_row, team_leader, column_index):
@@ -360,9 +377,9 @@ def insert_totals(wb, sheet_name, start_row, header_name):
     sheet.append([])
 
 
-def main():
+def main(browser, unit_name):
     # app = QApplication([])
-    browser, unit_name = do_login()
+    # browser, unit_name = _do_login()
     if not browser:
         print("error occurred. exiting gracefully")
         exit(0)
@@ -410,5 +427,5 @@ def main():
     print(f'### DONE')
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
