@@ -1,6 +1,5 @@
 from typing import Final
 
-from PyQt5.QtWidgets import QApplication, QMessageBox
 from openpyxl.styles import Alignment
 import unicodedata
 from selenium.webdriver.support import expected_conditions as EC
@@ -14,7 +13,7 @@ CHECK_MARK = u'\u2714'
 BOLD_FONT: Final[Font] = Font(bold=True, size=14)
 LIGHT_BLUE_FILL: Final[PatternFill] = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
 YELLOW_FILL: Final[PatternFill] = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-app = QApplication([])  # QApplication instance is required for QMessageBox
+# app = QApplication([])  # QApplication instance is required for QMessageBox
 
 
 # enum for family status
@@ -55,7 +54,8 @@ def filter_unit_name_no_search_button(browser, filter_by, unit_name):
         print("### Found the option")
         option.click()
     except TimeoutException:
-        QMessageBox.information(None, "שגיאה", "לא נמצאה יחידה עם שם זה")
+        print(f'### unit name: {unit_name} not found')
+        # QMessageBox.information(None, "שגיאה", "לא נמצאה יחידה עם שם זה")
         exit(0)
 
 
@@ -64,7 +64,10 @@ def filter_unit_name_no_search_button(browser, filter_by, unit_name):
         return new_row_count != current_row_count
 
     # wait for the table to be updated after unit filter
-    WebDriverWait(browser, 10).until(__rows_have_updated)
+    try:
+        WebDriverWait(browser, 10).until(__rows_have_updated)
+    except:
+        print("got timeout while waiting for rows number to change")
 
 
 def filter_unit_name_with_search_button(browser, unit_name, families_status = FamilyStatus.ACTIVE):

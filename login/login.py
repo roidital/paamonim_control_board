@@ -1,11 +1,11 @@
 import os
 from typing import Final
-# from PyQt5.QtWidgets import QApplication, QWidget, QInputDialog, QMessageBox, QLineEdit
+# from pyvirtualdisplay import Display
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+# from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
-# from flask import request
+from flask import flash, redirect, url_for
 
 CRED_FILE: Final[str] = "paamonim_cred.txt"
 LOGIN_URL: Final[str] = 'https://app.paamonim.org.il'
@@ -23,10 +23,17 @@ def _do_login(username, password, unit_name):
     #     username, ok = QInputDialog.getText(None, "התחברות", "מה היוזר(האימייל) שלך בפעמונים?")
     #     password, ok = QInputDialog.getText(None, "התחברות", "מה הסיסמת התחברות שלך בפעמונים?", QLineEdit.Password)
     #
-    #
+    
+    # create a new virtual display
+    #display = Display(visible=0, size=(800, 600))
+    #display.start()
+
     # create an Options instance
-    options = Options()
-    # options.add_argument("--headless")
+    # options = Options()
+    options = webdriver.ChromeOptions()
+    options.add_argument("--no-sandbox")
+    options.add_argument("--headless")
+    options.add_argument("--disable-gpu")
 
     # create a new Chrome browser instance
     browser = webdriver.Chrome(options=options)

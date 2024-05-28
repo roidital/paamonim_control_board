@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, send_file, abort, redirect, url_for
+from flask import Flask, render_template, request, session, send_file, abort, redirect, url_for, flash
 from add_team_members import main
 from login.login import _do_login
 import os
@@ -17,8 +17,8 @@ app.secret_key = os.urandom(24)
 def home():
     # Call your main function here
     # You might need to modify your script to return a string message instead of printing to the console
-    result = main()  # Assuming main() is your script's function
-    return str(result)
+    # result = main()  # Assuming main() is your script's function
+    return redirect(url_for('do_login'))
 
 @app.route('/login', methods=['GET'])
 def login_form():
@@ -33,6 +33,10 @@ def do_login():
     password = request.form.get('password')
     unit_name = request.form.get('unit_name')
     browser, unit_name = _do_login(username, password, unit_name)
+    if not browser:
+        flash("שגיאת התחברות, אנא בדוק/י שהיוזר והסיסמא נכונים")
+        return redirect(url_for('do_login'))
+
     main(browser, unit_name)
     return redirect(url_for('download_excel'))
 

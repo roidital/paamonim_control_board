@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "paamonim"
+name = "paamonim_control_board"
 version = "0.1.0"
 description = ""
 authors = ["Roi Dital <roi.dital@cyberark.com>"]
@@ -9,9 +9,9 @@ readme = "README.md"
 python = "^3.8"
 selenium = "^4.20.0"
 openpyxl = "^3.1.2"
-easygui = "^0.98.3"
-pyqt5 = "^5.15.10"
 flask = "^3.0.3"
+pyvirtualdisplay = "^3.0"
+easyprocess = "^1.1"
 
 
 [build-system]

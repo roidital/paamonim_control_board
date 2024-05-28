@@ -2,10 +2,10 @@ import os
 import re
 from typing import Final
 import openpyxl
-from PyQt5.QtWidgets import QApplication
 import datetime
 from login.login import _do_login
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment, Color
+from openpyxl.worksheet.hyperlink import Hyperlink
 from selenium.webdriver.common.by import By
 from time import sleep
 from collections import defaultdict
@@ -238,8 +238,15 @@ def update_wb_families_status(wb, sheet_name, header_name, start_row, family_cou
                     set_cell_value(sheet.cell(row + i - 1, column_index + family_count_column_shift), '-')
 
                 families_cell = sheet.cell(row=row + i - 1, column=column_index + family_list_column_shift)
+
                 cell_value = f'=HYPERLINK("{link}", "{name}")'
+                # cell_ref = f"{openpyxl.utils.get_column_letter(column_index+family_list_column_shift)}{row+i-1}"
+                # hyperlink = Hyperlink(ref=cell_ref, display=name, location=link)
+                print(f'### name: {name}  link:{link}')
                 set_cell_value(families_cell, cell_value, font=Font(color=Color(rgb="0000FF"), underline='single'))
+                # families_cell.hyperlink = hyperlink
+                # families_cell.value = hyperlink.display
+
                 families_cell.alignment = Alignment(wrap_text=True, horizontal='center', vertical='center')
                 # Adjust the height of the row to fit the content of the cell
                 sheet.row_dimensions[

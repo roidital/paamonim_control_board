@@ -8,11 +8,14 @@
             align-items: center;
             height: 100vh;
             font-size: 40px; /* Increase the font size */
+            background-image: url("{{ url_for('static', filename='background.jpg') }}");
+            background-size: cover; /* Resize the background image to cover the entire container */
         }
         .container {
             display: flex;
             flex-direction: column;
             align-items: center;
+            background-color: rgba(255, 255, 255, 0.8); /* Add a semi-transparent white background to the container to make the text more readable */
         }
         form {
             text-align: center; /* Center the text inside the form */
@@ -20,11 +23,26 @@
         label {
             color: blue; /* Color the text of the labels in blue */
         }
+        #loadingMessage {
+            display: none;
+        }
     </style>
+    <script>
+        function showLoadingMessage() {
+            document.getElementById('loadingMessage').style.display = 'block';
+        }
+    </script>
 </head>
 <body>
     <div class="container">
-        <form method="POST" action="/login">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-warning">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+        <form method="POST" action="/login" onsubmit="showLoadingMessage()">
             <label for="username">מהו שם המשתמש שלך בפעמונים</label><br>
             <input type="text" id="username" name="username"><br>
             <label for="password">הכנס/י את הסיסמא שלך בפעמונים</label><br>
@@ -33,6 +51,9 @@
             <input type="text" id="unit_name" name="unit_name"><br>
             <input type="submit" value="Submit">
         </form>
+        <div id="loadingMessage">
+            ...האקסל שלך בהכנה, חשוב שלא לסגור את חלון הדפדפן הזה עד שהפעולה תסתיים, לוקח בערך דקה
+        </div>
         <img src="{{ url_for('static', filename='paamonim_logo.jpg') }}" alt="My Photo" width="300" height="300">
     </div>
 </body>
