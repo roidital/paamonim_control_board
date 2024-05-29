@@ -218,7 +218,6 @@ def update_wb_families_status(wb, sheet_name, header_name, start_row, family_cou
     # Find the column index of the header
     column_index = __find_header_index(sheet, header_name)
 
-    # iterate over the rows in the header name index starting from row start_row
     for row in range(start_row, sheet.max_row + 1):
         # Check if the cell in the escort person column is valid for parsing
         if (sheet.cell(row=row, column=column_index).value and
@@ -242,10 +241,10 @@ def update_wb_families_status(wb, sheet_name, header_name, start_row, family_cou
                 cell_value = f'=HYPERLINK("{link}", "{name}")'
                 # cell_ref = f"{openpyxl.utils.get_column_letter(column_index+family_list_column_shift)}{row+i-1}"
                 # hyperlink = Hyperlink(ref=cell_ref, display=name, location=link)
-                print(f'### name: {name}  link:{link}')
+                # print(f'### name: {name}  link:{link}')
                 set_cell_value(families_cell, cell_value, font=Font(color=Color(rgb="0000FF"), underline='single'))
-                # families_cell.hyperlink = hyperlink
-                # families_cell.value = hyperlink.display
+                #families_cell.hyperlink = link
+                #families_cell.value = name
 
                 families_cell.alignment = Alignment(wrap_text=True, horizontal='center', vertical='center')
                 # Adjust the height of the row to fit the content of the cell
@@ -356,32 +355,74 @@ def insert_totals(wb, sheet_name, start_row, header_name):
     vacation_counter = 0
     blank_rows_count = 0
 
-    # Iterate over each row starting from the start row
+    current_team_first_row = start_row
     for row in range(start_row, sheet.max_row + 1):
         # Check if the cell in the active column and the vacation column has a check mark
         if sheet.cell(row=row, column=column_index).value is not None:
-            total_counter += 1
-            if sheet.cell(row=row, column=column_index + 1).value == u'\u2714':
-                active_counter += 1
-            if sheet.cell(row=row, column=column_index + 2).value == u'\u2714':
-                vacation_counter += 1
-            blank_rows_count = 0
-        else:
+            if sheet.cell(row=row, column=column_index).value != '-':
+                total_counter += 1
+                if sheet.cell(row=row, column=column_index + 1).value == u'\u2714':
+                    active_counter += 1
+                if sheet.cell(row=row, column=column_index + 2).value == u'\u2714':
+                    vacation_counter += 1
+                blank_rows_count = 0
+        else:  # done iterating all team members, reached  a blank row (total line or seperator between teams)
             if blank_rows_count == 0:
-                set_cell_value(sheet.cell(row=row, column=column_index), total_counter, LIGHT_BLUE_FILL)
+                # for the total counter set the counter-1 since team leader is counted twice
+                set_cell_value(sheet.cell(row=row, column=column_index), total_counter-1, LIGHT_BLUE_FILL)
                 set_cell_value(sheet.cell(row=row, column=column_index + 1), active_counter, LIGHT_BLUE_FILL)
                 set_cell_value(sheet.cell(row=row, column=column_index + 2), vacation_counter, LIGHT_BLUE_FILL)
                 total_counter = 0
                 active_counter = 0
                 vacation_counter = 0
+                _add_families_counters_totals(sheet, current_team_first_row, row, column_index)
+
+                current_team_first_row = row + 2
             blank_rows_count += 1
             if blank_rows_count == 2:
                 row += 2
             elif blank_rows_count > 2:
+                _add_all_branch_totals(sheet, start_row, row, column_index)
                 break
 
     # Insert a new row at the end
     sheet.append([])
+
+
+def _add_families_counters_totals(sheet, start_row, end_row, column_index):
+    # add the sum of all the counters (active families counter and ready_families_counter) in the proper columns
+    column_letter = openpyxl.utils.get_column_letter(column_index+3)
+    set_cell_value(sheet.cell(row=end_row, column=column_index+3),
+                   f'=SUM({column_letter}{start_row}:{column_letter}{end_row-1})', LIGHT_BLUE_FILL)
+    column_letter = openpyxl.utils.get_column_letter(column_index + 5)
+    set_cell_value(sheet.cell(row=end_row, column=column_index + 5),
+                   f'=SUM({column_letter}{start_row}:{column_letter}{end_row-1})', LIGHT_BLUE_FILL)
+
+
+def _add_all_branch_totals(sheet, start_row, end_row, column_index):
+    set_cell_value(sheet.cell(row=end_row, column=column_index-1), "סה״כ בסניף", LIGHT_BLUE_FILL)
+    # Adjust the width of the column to text length #todo: put this adjustment into a function (appears in multiple places)
+    column_letter = openpyxl.utils.get_column_letter(column_index-1)
+    if len(sheet.cell(end_row, column_index-1).value) > sheet.column_dimensions[column_letter].width:
+        sheet.column_dimensions[column_letter].width = len(sheet.cell(end_row, column_index-1).value)*1.5
+    # todo: do a loop instead of repeating for 3 columns
+    column_letter = openpyxl.utils.get_column_letter(column_index)
+    set_cell_value(sheet.cell(row=end_row, column=column_index),
+                   f'=SUM({column_letter}{start_row}:{column_letter}{end_row - 1})', LIGHT_BLUE_FILL)
+    column_letter = openpyxl.utils.get_column_letter(column_index + 1)
+    set_cell_value(sheet.cell(row=end_row, column=column_index + 1),
+                   f'=SUM({column_letter}{start_row}:{column_letter}{end_row - 1})', LIGHT_BLUE_FILL)
+    column_letter = openpyxl.utils.get_column_letter(column_index + 2)
+    set_cell_value(sheet.cell(row=end_row, column=column_index + 2),
+                   f'=SUM({column_letter}{start_row}:{column_letter}{end_row - 1})', LIGHT_BLUE_FILL)
+    # for the families counters the SUM formula counts also the teams total lines, so we need to divide it by half
+    column_letter = openpyxl.utils.get_column_letter(column_index + 3)
+    set_cell_value(sheet.cell(row=end_row, column=column_index + 3),
+                   f'=SUM({column_letter}{start_row}:{column_letter}{end_row - 1})/2', LIGHT_BLUE_FILL)
+    column_letter = openpyxl.utils.get_column_letter(column_index + 5)
+    set_cell_value(sheet.cell(row=end_row, column=column_index + 5),
+                   f'=SUM({column_letter}{start_row}:{column_letter}{end_row - 1})/2', LIGHT_BLUE_FILL)
+
 
 
 def main(browser, unit_name):
