@@ -1,10 +1,7 @@
 from flask import Flask, render_template, request, session, send_file, abort, redirect, url_for, flash
-from add_team_members import main
+from src.main import main
 from login.login import _do_login
 import os
-from io import BytesIO
-import base64
-
 
 app_dir = os.path.dirname(os.path.abspath(__file__))
 template_dir = os.path.join(app_dir, 'templates')
@@ -43,18 +40,6 @@ def do_login():
 
 @app.route('/download', methods=['GET'])
 def download_excel():
-    # # Retrieve the BytesIO object from the Flask session
-    # excel_file_str = session.get('excel_file')
-    # if excel_file_str is None:
-    #     # If there's no file to download, send a 404 Not Found response
-    #     abort(404)
-    # # Decode the base64 string back to a BytesIO object
-    # excel_file = BytesIO(base64.b64decode(excel_file_str))
-    # # Create a Flask response with the Excel file
-    # response = send_file(excel_file, as_attachment=True, download_name='cockpit.xlsx',
-    #                  mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    # print(f"### response: {response}")
-    # return response
     # Retrieve the temporary file's name from the session
     temp_file_name = session.get('temp_file')
 
@@ -70,6 +55,7 @@ def download_excel():
     os.remove(temp_file_name)
 
     return response
+
 
 if __name__ == '__main__':
     app.run(debug=True)

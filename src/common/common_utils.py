@@ -6,21 +6,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
-from openpyxl.styles import Font, PatternFill
-from enum import Enum
+from src.common.constants import LEFT_TOP_BORDER, RIGHT_TOP_BORDER, TOP_BORDER, BOTTOM_BORDER, LEFT_BOTTOM_BORDER, \
+    RIGHT_BOTTOM_BORDER, LEFT_BORDER, RIGHT_BORDER, BOLD_FONT, FamilyStatus, HEADERS_ROW_NUM
 
-CHECK_MARK = u'\u2714'
-BOLD_FONT: Final[Font] = Font(bold=True, size=14)
-LIGHT_BLUE_FILL: Final[PatternFill] = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
-YELLOW_FILL: Final[PatternFill] = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+
 # app = QApplication([])  # QApplication instance is required for QMessageBox
-
-
-# enum for family status
-class FamilyStatus(Enum):
-    ACTIVE = 1
-    READY_TO_START = 2
-    ENDED = 3
 
 
 def normalize_string(s):
@@ -58,7 +48,6 @@ def filter_unit_name_no_search_button(browser, filter_by, unit_name):
         # QMessageBox.information(None, "שגיאה", "לא נמצאה יחידה עם שם זה")
         exit(0)
 
-
     def __rows_have_updated(browser):
         new_row_count = len(browser.find_elements(By.XPATH, f'.//tr[starts-with(@id, {filter_by})]'))
         return new_row_count != current_row_count
@@ -89,7 +78,8 @@ def filter_unit_name_with_search_button(browser, unit_name, families_status = Fa
             break
 
     if not found_option:
-        QMessageBox.information(None, "שגיאה", "לא נמצאה יחידה עם שם זה")
+        # QMessageBox.information(None, "שגיאה", "לא נמצאה יחידה עם שם זה")
+        print(f'### ERROR - unit name: {unit_name} not found')
         exit(0)
 
     if families_status == FamilyStatus.READY_TO_START:
@@ -104,3 +94,27 @@ def filter_unit_name_with_search_button(browser, unit_name, families_status = Fa
     # select the second table
     table = tables[1]
     return table
+
+
+def __apply_border_to_team_table(sheet, start_row, end_row, first_column_index, last_column_shift):
+    sheet.cell(row=start_row, column=first_column_index).border = LEFT_TOP_BORDER
+    sheet.cell(row=start_row, column=first_column_index + last_column_shift).border = RIGHT_TOP_BORDER
+    for column in range(first_column_index + 1, first_column_index + last_column_shift):
+        sheet.cell(row=start_row, column=column).border = TOP_BORDER
+        sheet.cell(row=end_row, column=column).border = BOTTOM_BORDER
+
+    sheet.cell(row=end_row, column=first_column_index).border = LEFT_BOTTOM_BORDER
+    sheet.cell(row=end_row, column=first_column_index + last_column_shift).border = RIGHT_BOTTOM_BORDER
+    for row in range(start_row + 1, end_row):
+        sheet.cell(row=row, column=first_column_index).border = LEFT_BORDER
+        sheet.cell(row=row, column=first_column_index + last_column_shift).border = RIGHT_BORDER
+
+
+def __find_header_index(sheet, header_name):
+    for col in range(1, sheet.max_column + 1):
+        cell_value = sheet.cell(row=HEADERS_ROW_NUM, column=col).value
+        if cell_value and normalize_string(cell_value) == normalize_string(header_name):
+            return col
+
+    print(f"Header '{header_name}' not found.")
+    return None
