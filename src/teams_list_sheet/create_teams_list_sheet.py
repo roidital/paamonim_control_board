@@ -1,10 +1,12 @@
 import re
 import openpyxl
 from src.common.common_utils import set_cell_value, __find_header_index, filter_unit_name_with_search_button, \
-    filter_unit_name_no_search_button, __apply_border_to_team_table
+    filter_unit_name_no_search_button, __apply_border_to_team_table, __adjust_column_width_to_text, \
+    set_sum_formula_to_cell
 from src.common.constants import URL_ACTIVE_TEAM_MEMBERS, TEAMS_LIST_SHEET_NAME, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, \
     HEADER_NAME, \
-    ULR_VACATION_TEAM_MEMBERS, URL_FAMILIES_STATUS_PAGE, CHECK_MARK, FamilyStatus, LIGHT_BLUE_FILL
+    ULR_VACATION_TEAM_MEMBERS, URL_FAMILIES_STATUS_PAGE, CHECK_MARK, FamilyStatus, LIGHT_BLUE_FILL, \
+    TUTOR_COLUMN_IN_TEAMS_SHEET
 from collections import defaultdict
 from selenium.webdriver.common.by import By
 from openpyxl.styles import Font, Alignment, Color
@@ -130,7 +132,6 @@ def update_wb_vacation_team_members(wb, sheet_name, header_name, start_row, team
             set_cell_value(sheet.cell(row=last_team_member_row + i, column=column_index + 2), CHECK_MARK)
 
 
-# todo: add column index instead of hard coded '3'
 def collect_tutor_families(browser, unit_name, url_page, family_status):
     browser.get(url_page)
 
@@ -141,7 +142,7 @@ def collect_tutor_families(browser, unit_name, url_page, family_status):
 
     for row in rows:
         cells = row.find_elements(By.TAG_NAME, "td")
-        assigned_to = cells[3].text
+        assigned_to = cells[TUTOR_COLUMN_IN_TEAMS_SHEET].text
         family_name = cells[0].text
         family_link = cells[0].find_element(By.TAG_NAME, "a").get_attribute("href")
         families = active_families_list[assigned_to]
@@ -184,7 +185,7 @@ def update_wb_families_status(wb, sheet_name, header_name, start_row, family_cou
                 sheet.row_dimensions[
                     row + i - 1].height = 30  # Estimate the height based on the number of lines in the cell
 
-    # Adjust the width of the column to be twice as wide as its current width
+    # Adjust the width of the ENTIRE column to be twice as wide as its current width
     column_letter = openpyxl.utils.get_column_letter(column_index + family_list_column_shift)
     sheet.column_dimensions[column_letter].width = sheet.column_dimensions[column_letter].width * 2
 
@@ -248,27 +249,17 @@ def _add_families_counters_totals(sheet, start_row, end_row, column_index):
 
 def _add_all_branch_totals(sheet, start_row, end_row, column_index):
     set_cell_value(sheet.cell(row=end_row, column=column_index-1), "סה״כ בסניף", LIGHT_BLUE_FILL)
-    # Adjust the width of the column to text length #todo: put this adjustment into a function (appears in multiple places)
-    column_letter = openpyxl.utils.get_column_letter(column_index-1)
-    if len(sheet.cell(end_row, column_index-1).value) > sheet.column_dimensions[column_letter].width:
-        sheet.column_dimensions[column_letter].width = len(sheet.cell(end_row, column_index-1).value)*1.5
-    # todo: do a loop instead of repeating for 3 columns
-    column_letter = openpyxl.utils.get_column_letter(column_index)
-    set_cell_value(sheet.cell(row=end_row, column=column_index),
-                   f'=SUM({column_letter}{start_row}:{column_letter}{end_row - 1})', LIGHT_BLUE_FILL)
-    column_letter = openpyxl.utils.get_column_letter(column_index + 1)
-    set_cell_value(sheet.cell(row=end_row, column=column_index + 1),
-                   f'=SUM({column_letter}{start_row}:{column_letter}{end_row - 1})', LIGHT_BLUE_FILL)
-    column_letter = openpyxl.utils.get_column_letter(column_index + 2)
-    set_cell_value(sheet.cell(row=end_row, column=column_index + 2),
-                   f'=SUM({column_letter}{start_row}:{column_letter}{end_row - 1})', LIGHT_BLUE_FILL)
-    # for the families counters the SUM formula counts also the teams total lines, so we need to divide it by half
-    column_letter = openpyxl.utils.get_column_letter(column_index + 3)
-    set_cell_value(sheet.cell(row=end_row, column=column_index + 3),
-                   f'=SUM({column_letter}{start_row}:{column_letter}{end_row - 1})/2', LIGHT_BLUE_FILL)
-    column_letter = openpyxl.utils.get_column_letter(column_index + 5)
-    set_cell_value(sheet.cell(row=end_row, column=column_index + 5),
-                   f'=SUM({column_letter}{start_row}:{column_letter}{end_row - 1})/2', LIGHT_BLUE_FILL)
+
+    # Adjust the width of the column to text length
+    __adjust_column_width_to_text(sheet, end_row, column_index-1)
+
+    # set the escorts (active and vacation) counters
+    for column in [column_index, column_index + 1, column_index + 2]:
+        set_sum_formula_to_cell(sheet, start_row, end_row, column)
+
+    # for the families counters the SUM formula counts also the teams total lines, so we need to divide it by 2
+    set_sum_formula_to_cell(sheet, start_row, end_row, column_index + 3, divide_by_2=True)
+    set_sum_formula_to_cell(sheet, start_row, end_row, column_index + 5, divide_by_2=True)
 
 
 def __find_first_and_last_team_member_rows(sheet, start_row, team_leader, column_index):

@@ -1,13 +1,12 @@
-from typing import Final
-
 from openpyxl.styles import Alignment
 import unicodedata
+import openpyxl
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from src.common.constants import LEFT_TOP_BORDER, RIGHT_TOP_BORDER, TOP_BORDER, BOTTOM_BORDER, LEFT_BOTTOM_BORDER, \
-    RIGHT_BOTTOM_BORDER, LEFT_BORDER, RIGHT_BORDER, BOLD_FONT, FamilyStatus, HEADERS_ROW_NUM
+    RIGHT_BOTTOM_BORDER, LEFT_BORDER, RIGHT_BORDER, BOLD_FONT, FamilyStatus, HEADERS_ROW_NUM, LIGHT_BLUE_FILL
 
 
 # app = QApplication([])  # QApplication instance is required for QMessageBox
@@ -96,6 +95,12 @@ def filter_unit_name_with_search_button(browser, unit_name, families_status = Fa
     return table
 
 
+def set_sum_formula_to_cell(sheet, start_row, end_row, column_index, divide_by_2=False):
+    column_letter = openpyxl.utils.get_column_letter(column_index)
+    formula = f'=SUM({column_letter}{start_row}:{column_letter}{end_row - 1})'
+    set_cell_value(sheet.cell(row=end_row, column=column_index), (formula + '/2' if divide_by_2 else formula), LIGHT_BLUE_FILL)
+
+
 def __apply_border_to_team_table(sheet, start_row, end_row, first_column_index, last_column_shift):
     sheet.cell(row=start_row, column=first_column_index).border = LEFT_TOP_BORDER
     sheet.cell(row=start_row, column=first_column_index + last_column_shift).border = RIGHT_TOP_BORDER
@@ -118,3 +123,9 @@ def __find_header_index(sheet, header_name):
 
     print(f"Header '{header_name}' not found.")
     return None
+
+
+def __adjust_column_width_to_text(sheet, row, column):
+    column_letter = openpyxl.utils.get_column_letter(column)
+    if len(sheet.cell(row, column).value) > sheet.column_dimensions[column_letter].width:
+        sheet.column_dimensions[column_letter].width = len(sheet.cell(row, column).value) * 1.5

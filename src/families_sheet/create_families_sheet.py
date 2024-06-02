@@ -1,7 +1,8 @@
 import openpyxl
 import datetime
 from src.common.common_utils import filter_unit_name_with_search_button, set_cell_value, __apply_border_to_team_table
-from src.common.constants import URL_FAMILIES_STATUS_PAGE, LIGHT_BLUE_FILL, FAMILIES_SHEET_NAME, YELLOW_FILL
+from src.common.constants import URL_FAMILIES_STATUS_PAGE, LIGHT_BLUE_FILL, FAMILIES_SHEET_NAME, YELLOW_FILL, \
+    FAMILIES_SHEET_FIRST_COLUMN_INDEX, FAMILIES_SHEET_LAST_COLUMN_INDEX, DAYS_WITHOUT_BUDGET_LIMIT
 from selenium.webdriver.common.by import By
 
 
@@ -17,8 +18,8 @@ def create_families_sheet(wb, sheet_name, browser, start_row, tutor_to_families,
     i = start_row
     for (tutor, families) in tutor_to_families.items():
         # create a header line for this tutor
-        sheet.merge_cells(start_row=i, start_column=6, end_row=i, end_column=19)
-        merged_cell = sheet.cell(row=i, column=6)
+        sheet.merge_cells(start_row=i, start_column=FAMILIES_SHEET_FIRST_COLUMN_INDEX, end_row=i, end_column=FAMILIES_SHEET_LAST_COLUMN_INDEX)
+        merged_cell = sheet.cell(row=i, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX)
         set_cell_value(merged_cell, tutor, fill=LIGHT_BLUE_FILL)
         i += 1
 
@@ -28,12 +29,13 @@ def create_families_sheet(wb, sheet_name, browser, start_row, tutor_to_families,
             for row in rows:
                 cells = row.find_elements(By.TAG_NAME, "td")
                 if family[0] in cells[0].text:
-                    # copy the row to the excel sheet
+                    # copy the row to the excel sheet (it takes only selected fields from the row)
+                    # todo: this is a horrible code:), please think of a nicer way to do that
                     row_data = [cells[0].text, cells[1].text, cells[2].text, cells[12].text,
                                 cells[13].text, cells[14].text, cells[7].text, cells[15].text, cells[9].text,
                                 cells[11].text, cells[10].text, cells[8].text, cells[6].text]
                     # write row_data to the excel at row
-                    for col, cell in enumerate(row_data, start=6):
+                    for col, cell in enumerate(row_data, start=FAMILIES_SHEET_FIRST_COLUMN_INDEX):
                         set_cell_value(sheet.cell(row=i, column=col), cell)
                         # Adjust the width of the column to text length #todo: put this adjustment into a function
                         column_letter = openpyxl.utils.get_column_letter(col)
@@ -44,12 +46,14 @@ def create_families_sheet(wb, sheet_name, browser, start_row, tutor_to_families,
                     break
 
     num_of_table_rows = i
-    __apply_border_to_team_table(wb[FAMILIES_SHEET_NAME], 1, num_of_table_rows - 1, 6, 13)
+    __apply_border_to_team_table(wb[FAMILIES_SHEET_NAME], 1, num_of_table_rows - 1,
+                                 FAMILIES_SHEET_FIRST_COLUMN_INDEX,
+                                 (FAMILIES_SHEET_LAST_COLUMN_INDEX-FAMILIES_SHEET_FIRST_COLUMN_INDEX))
 
 
 def write_family_alerts(cells, sheet, row):
     alerts = []
-    if not cells[8].text and int(cells[6].text.split()[0]) > 45:
+    if not cells[8].text and int(cells[6].text.split()[0]) > DAYS_WITHOUT_BUDGET_LIMIT:
         alerts.append("ליווי בן יותר מ-45 יום ועדיין ללא תקציב ")
     if not cells[12].text.strip():
         alerts.append("אין פגישה אחרונה בתיק")
@@ -71,11 +75,11 @@ def write_family_alerts(cells, sheet, row):
     for i, alert in enumerate(alerts, start=1):
         if i > 1:
             sheet.insert_rows(row + i - 1)
-        set_cell_value(sheet.cell(row=row + i - 1, column=19), alert, fill=YELLOW_FILL)
+        set_cell_value(sheet.cell(row=row + i - 1, column=FAMILIES_SHEET_LAST_COLUMN_INDEX), alert, fill=YELLOW_FILL)
         # Adjust the width of the column to text length #todo: put this adjustment into a function
-        column_letter = openpyxl.utils.get_column_letter(19)
-        if len(sheet.cell(row + i - 1, 19).value) > sheet.column_dimensions[column_letter].width:
-            sheet.column_dimensions[column_letter].width = len(sheet.cell(row+i-1, 19).value)
+        column_letter = openpyxl.utils.get_column_letter(FAMILIES_SHEET_LAST_COLUMN_INDEX)
+        if len(sheet.cell(row + i - 1, FAMILIES_SHEET_LAST_COLUMN_INDEX).value) > sheet.column_dimensions[column_letter].width:
+            sheet.column_dimensions[column_letter].width = len(sheet.cell(row+i-1, FAMILIES_SHEET_LAST_COLUMN_INDEX).value)
 
     print(f'### alerts for family {cells[0].text}: {alerts}')
     return len(alerts)

@@ -16,6 +16,10 @@ FAMILIES_SHEET_NAME: Final[str] = "דוח משפחות"
 TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM: Final[int] = 6
 FAMILIES_SHEET_FIRST_ROW_NUM: Final[int] = 3
 HEADERS_ROW_NUM: Final[int] = 5
+TUTOR_COLUMN_IN_TEAMS_SHEET: Final[int] = 3
+FAMILIES_SHEET_FIRST_COLUMN_INDEX: Final[int] = 6
+FAMILIES_SHEET_LAST_COLUMN_INDEX: Final[int] = 19
+DAYS_WITHOUT_BUDGET_LIMIT: Final[int] = 45
 
 # borders
 THIN_BORDER: Final[Border] = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'),
