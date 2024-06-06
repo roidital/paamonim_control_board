@@ -19,12 +19,14 @@ def normalize_string(s):
     return unicodedata.normalize("NFD", s).casefold()
 
 
-def set_cell_value(cell, value, fill=None, font=BOLD_FONT):
+def set_cell_value(cell, value, fill=None, font=BOLD_FONT, adjust_width=False):
     cell.value = value
     cell.font = font
     if fill:
         cell.fill = fill
     cell.alignment = Alignment(horizontal='center', vertical='center')
+    if adjust_width:
+        __adjust_column_width_to_text(cell)
 
 
 def filter_unit_name_no_search_button(browser, filter_by, unit_name):
@@ -125,7 +127,8 @@ def __find_header_index(sheet, header_name):
     return None
 
 
-def __adjust_column_width_to_text(sheet, row, column):
-    column_letter = openpyxl.utils.get_column_letter(column)
-    if len(sheet.cell(row, column).value) > sheet.column_dimensions[column_letter].width:
-        sheet.column_dimensions[column_letter].width = len(sheet.cell(row, column).value) * 1.5
+def __adjust_column_width_to_text(cell):
+    column_letter = openpyxl.utils.get_column_letter(cell.column)
+    cell_value_str = str(cell.value)
+    if len(cell_value_str) > cell.parent.column_dimensions[column_letter].width:
+        cell.parent.column_dimensions[column_letter].width = len(cell_value_str) * 1.5

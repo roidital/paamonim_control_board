@@ -4,6 +4,8 @@ from enum import Enum
 
 
 # general constants
+MAIN_LOGIN_URL: Final[str] = 'https://app.paamonim.org.il'
+BUDGET_AND_BALANCES_PAGE: Final[str] = 'https://app.paamonim.org.il/budgets/budget_and_balances/'
 URL_ACTIVE_TEAM_MEMBERS: Final[str] = 'https://app.paamonim.org.il/contacts/paam_index'
 ULR_VACATION_TEAM_MEMBERS: Final[str] = 'https://app.paamonim.org.il/contacts/paam_index?in_vacation=1'
 URL_FAMILIES_STATUS_PAGE: Final[str] = 'https://app.paamonim.org.il/budgets'
@@ -14,11 +16,11 @@ FAMILIES_SHEET_NAME: Final[str] = "דוח משפחות"
 
 # column//row indices
 TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM: Final[int] = 6
-FAMILIES_SHEET_FIRST_ROW_NUM: Final[int] = 3
+FAMILIES_SHEET_FIRST_ROW_NUM: Final[int] = 4
 HEADERS_ROW_NUM: Final[int] = 5
 TUTOR_COLUMN_IN_TEAMS_SHEET: Final[int] = 3
-FAMILIES_SHEET_FIRST_COLUMN_INDEX: Final[int] = 6
-FAMILIES_SHEET_LAST_COLUMN_INDEX: Final[int] = 19
+FAMILIES_SHEET_FIRST_COLUMN_INDEX: Final[int] = 2
+FAMILIES_SHEET_LAST_COLUMN_INDEX: Final[int] = 21
 DAYS_WITHOUT_BUDGET_LIMIT: Final[int] = 45
 
 # borders

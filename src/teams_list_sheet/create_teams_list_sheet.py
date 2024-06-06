@@ -248,10 +248,10 @@ def _add_families_counters_totals(sheet, start_row, end_row, column_index):
 
 
 def _add_all_branch_totals(sheet, start_row, end_row, column_index):
-    set_cell_value(sheet.cell(row=end_row, column=column_index-1), "סה״כ בסניף", LIGHT_BLUE_FILL)
+    set_cell_value(sheet.cell(row=end_row, column=column_index-1), "סה״כ בסניף", LIGHT_BLUE_FILL, adjust_width=True)
 
     # Adjust the width of the column to text length
-    __adjust_column_width_to_text(sheet, end_row, column_index-1)
+    # __adjust_column_width_to_text(sheet, end_row, column_index-1)
 
     # set the escorts (active and vacation) counters
     for column in [column_index, column_index + 1, column_index + 2]:
