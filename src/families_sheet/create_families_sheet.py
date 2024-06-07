@@ -13,7 +13,7 @@ import nest_asyncio
 nest_asyncio.apply()
 
 
-def create_families_sheet(wb, sheet_name, browser, start_row, tutor_to_families, unit_name):
+def create_families_sheet(wb, sheet_name, browser, start_row, tutor_to_families, unit_name, username, password):
     # to reset the checkboxes checked by previous steps
     browser.get(URL_FAMILIES_STATUS_PAGE)
     filter_unit_name_with_search_button(browser, unit_name)
@@ -66,7 +66,7 @@ def create_families_sheet(wb, sheet_name, browser, start_row, tutor_to_families,
                     num_skip_lines = write_family_alerts(family_data_dict[family_id], sheet, i)
                     i += num_skip_lines if num_skip_lines > 0 else 1
                     break
-    asyncio.run(browser_dispatcher(family_data_dict))
+    asyncio.run(browser_dispatcher(family_data_dict, username, password))
     #print(f'### AFTER family_data_dict: {family_data_dict}')
     for family_id in family_data_dict.keys():
         line_num = family_data_dict[family_id]['line_num']
@@ -154,9 +154,9 @@ async def auto_login(username, password):
     return browser
 
 
-async def browser_dispatcher(family_data_dict):
+async def browser_dispatcher(family_data_dict, username, password):
     # Perform login
-    browser = await auto_login('roidital@gmail.com', 'roiDit23')
+    browser = await auto_login(username, password)
 
     tasks = [fetch_family_data(browser, family_id, family_data_dict) for family_id in family_data_dict.keys() if family_data_dict[family_id]['last_shikuf_bitsua'] != '']
     pages_content = await asyncio.gather(*tasks)
