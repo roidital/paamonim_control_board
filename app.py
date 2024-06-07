@@ -34,7 +34,7 @@ def do_login():
         flash("שגיאת התחברות, אנא בדוק/י שהיוזר והסיסמא נכונים")
         return redirect(url_for('do_login'))
 
-    main(browser, unit_name)
+    main(browser, unit_name, username, password)
     return redirect(url_for('download_excel'))
 
 
