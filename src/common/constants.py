@@ -3,12 +3,14 @@ from openpyxl.styles import Border, Side, Font, PatternFill
 from enum import Enum
 
 
-# general constants
+# URLs
 MAIN_LOGIN_URL: Final[str] = 'https://app.paamonim.org.il'
 BUDGET_AND_BALANCES_PAGE: Final[str] = 'https://app.paamonim.org.il/budgets/budget_and_balances/'
 URL_ACTIVE_TEAM_MEMBERS: Final[str] = 'https://app.paamonim.org.il/contacts/paam_index'
 ULR_VACATION_TEAM_MEMBERS: Final[str] = 'https://app.paamonim.org.il/contacts/paam_index?in_vacation=1'
 URL_FAMILIES_STATUS_PAGE: Final[str] = 'https://app.paamonim.org.il/budgets'
+
+# Excel constants
 EXCEL_FILENAME: Final[str] = "../cockpit.xlsx"
 HEADER_NAME: Final[str] = "שם"
 TEAMS_LIST_SHEET_NAME: Final[str] = "צוותים"
@@ -20,8 +22,34 @@ FAMILIES_SHEET_FIRST_ROW_NUM: Final[int] = 4
 HEADERS_ROW_NUM: Final[int] = 5
 TUTOR_COLUMN_IN_TEAMS_SHEET: Final[int] = 3
 FAMILIES_SHEET_FIRST_COLUMN_INDEX: Final[int] = 2
-FAMILIES_SHEET_LAST_COLUMN_INDEX: Final[int] = 21
+FAMILIES_SHEET_LAST_COLUMN_INDEX: Final[int] = 22
 DAYS_WITHOUT_BUDGET_LIMIT: Final[int] = 45
+READY_FAMILIES_SUM_COLUMN_DIFF: Final[int] = 3
+ACTIVE_FAMILIES_SUM_COLUMN_DIFF: Final[int] = 5
+
+# family data fields names
+FAMILY_NAME: Final[str] = "family_name"
+UNIT_NAME: Final[str] = "unit_name"
+CITY: Final[str] = "city"
+TUTOR: Final[str] = "tutor"
+LAST_MEETING_DATE: Final[str] = "last_meeting_date"
+NEXT_MEETING_DATE: Final[str] = "next_meeting_date"
+LAST_SHIKUF_BITSUA: Final[str] = "last_shikuf_bitsua"
+LAST_OSH_STATS: Final[str] = "last_osh_stats"
+TOTAL_DEBTS: Final[str] = "total_debts"
+MONTHLY_DEBTS_PAYMENT: Final[str] = "monthly_debts_payment"
+UNSETTLED_DEBTS: Final[str] = "unsettled_debts"
+BUDGET: Final[str] = "budget"
+CASE_AGE: Final[str] = "case_age"
+NUM_OF_MEETINGS: Final[str] = "num_of_meetings"
+NUM_CANCELLED_MEETINGS: Final[str] = "num_cancelled_meetings"
+BUDGET_INCOME: Final[str] = "budget_income"
+BUDGET_EXPENSE: Final[str] = "budget_expense"
+BUDGET_DIFF: Final[str] = "budget_diff"
+MONTH_INCOME: Final[str] = "month_income"
+MONTH_EXPENSE: Final[str] = "month_expense"
+LAST_MONTH_DIFF: Final[str] = "last_month_diff"
+
 
 # borders
 THIN_BORDER: Final[Border] = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'),

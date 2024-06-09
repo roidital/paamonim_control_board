@@ -56,7 +56,7 @@ def filter_unit_name_no_search_button(browser, filter_by, unit_name):
     # wait for the table to be updated after unit filter
     try:
         WebDriverWait(browser, 10).until(__rows_have_updated)
-    except:
+    except TimeoutException:
         print("got timeout while waiting for rows number to change")
 
 
@@ -131,4 +131,4 @@ def __adjust_column_width_to_text(cell):
     column_letter = openpyxl.utils.get_column_letter(cell.column)
     cell_value_str = str(cell.value)
     if len(cell_value_str) > cell.parent.column_dimensions[column_letter].width:
-        cell.parent.column_dimensions[column_letter].width = len(cell_value_str) * 1.5
+        cell.parent.column_dimensions[column_letter].width = len(cell_value_str) * 1.1

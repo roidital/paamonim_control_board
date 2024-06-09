@@ -1,12 +1,11 @@
 import re
 import openpyxl
 from src.common.common_utils import set_cell_value, __find_header_index, filter_unit_name_with_search_button, \
-    filter_unit_name_no_search_button, __apply_border_to_team_table, __adjust_column_width_to_text, \
-    set_sum_formula_to_cell
+    filter_unit_name_no_search_button, __apply_border_to_team_table, set_sum_formula_to_cell
 from src.common.constants import URL_ACTIVE_TEAM_MEMBERS, TEAMS_LIST_SHEET_NAME, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, \
     HEADER_NAME, \
     ULR_VACATION_TEAM_MEMBERS, URL_FAMILIES_STATUS_PAGE, CHECK_MARK, FamilyStatus, LIGHT_BLUE_FILL, \
-    TUTOR_COLUMN_IN_TEAMS_SHEET
+    TUTOR_COLUMN_IN_TEAMS_SHEET, READY_FAMILIES_SUM_COLUMN_DIFF, ACTIVE_FAMILIES_SUM_COLUMN_DIFF
 from collections import defaultdict
 from selenium.webdriver.common.by import By
 from openpyxl.styles import Font, Alignment, Color
@@ -49,7 +48,6 @@ def create_teams_list_sheet(browser, unit_name, wb):
 
 
 def retrieve_team_list(browser, unit_name, url_page, with_search_button=False, families_status=FamilyStatus.ACTIVE):
-    # navigate to the urlpage
     browser.get(url_page)
 
     if with_search_button:
@@ -68,8 +66,8 @@ def retrieve_team_list(browser, unit_name, url_page, with_search_button=False, f
         if len(split_text) > 1:
             team_list[split_text[1]].add(cells[1].text if cells[1].text else current_user)
 
-    # filter out all branch unit entries and family pool entries
-    return {key: value for key, value in team_list.items() if "סניף" not in key and key != "מאגר משפחות לליווי"}
+    # filter out all unrelated units such as (מאגר משפחות לליווי, שם הסניף וכו׳)
+    return {key: value for key, value in team_list.items() if key in team_list[key]}
 
 
 def apply_borders_to_all_teams(wb, sheet_name, header_name, start_row, team_list):
@@ -205,21 +203,25 @@ def insert_totals(wb, sheet_name, start_row, header_name):
 
     current_team_first_row = start_row
     for row in range(start_row, sheet.max_row + 1):
+        if row == current_team_first_row:
+            continue # skip the team leader row
         # Check if the cell in the active column and the vacation column has a check mark
         if sheet.cell(row=row, column=column_index).value is not None:
             if sheet.cell(row=row, column=column_index).value != '-':
                 total_counter += 1
-                if sheet.cell(row=row, column=column_index + 1).value == u'\u2714':
+                if sheet.cell(row=row, column=column_index + 1).value == CHECK_MARK:
                     active_counter += 1
-                if sheet.cell(row=row, column=column_index + 2).value == u'\u2714':
+                if sheet.cell(row=row, column=column_index + 2).value == CHECK_MARK:
                     vacation_counter += 1
                 blank_rows_count = 0
         else:  # done iterating all team members, reached  a blank row (total line or seperator between teams)
             if blank_rows_count == 0:
-                # for the total counter set the counter-1 since team leader is counted twice
-                set_cell_value(sheet.cell(row=row, column=column_index), total_counter-1, LIGHT_BLUE_FILL)
+                set_cell_value(sheet.cell(row=row, column=column_index), total_counter, LIGHT_BLUE_FILL)
                 set_cell_value(sheet.cell(row=row, column=column_index + 1), active_counter, LIGHT_BLUE_FILL)
                 set_cell_value(sheet.cell(row=row, column=column_index + 2), vacation_counter, LIGHT_BLUE_FILL)
+                # just color rest of the row (for cosmetic reasons)
+                _color_empty_cells_in_totals_line(sheet, row, column_index)
+
                 total_counter = 0
                 active_counter = 0
                 vacation_counter = 0
@@ -237,29 +239,35 @@ def insert_totals(wb, sheet_name, start_row, header_name):
     sheet.append([])
 
 
+def _color_empty_cells_in_totals_line(sheet, row, column_index):
+    set_cell_value(sheet.cell(row=row, column=column_index + 4), '', LIGHT_BLUE_FILL)
+    set_cell_value(sheet.cell(row=row, column=column_index + 6), '', LIGHT_BLUE_FILL)
+    set_cell_value(sheet.cell(row=row, column=column_index + 7), '', LIGHT_BLUE_FILL)
+
+
 def _add_families_counters_totals(sheet, start_row, end_row, column_index):
     # add the sum of all the counters (active families counter and ready_families_counter) in the proper columns
-    column_letter = openpyxl.utils.get_column_letter(column_index+3)
-    set_cell_value(sheet.cell(row=end_row, column=column_index+3),
+    column_letter = openpyxl.utils.get_column_letter(column_index+READY_FAMILIES_SUM_COLUMN_DIFF)
+    set_cell_value(sheet.cell(row=end_row, column=column_index+READY_FAMILIES_SUM_COLUMN_DIFF),
                    f'=SUM({column_letter}{start_row}:{column_letter}{end_row-1})', LIGHT_BLUE_FILL)
-    column_letter = openpyxl.utils.get_column_letter(column_index + 5)
-    set_cell_value(sheet.cell(row=end_row, column=column_index + 5),
+    column_letter = openpyxl.utils.get_column_letter(column_index + ACTIVE_FAMILIES_SUM_COLUMN_DIFF)
+    set_cell_value(sheet.cell(row=end_row, column=column_index + ACTIVE_FAMILIES_SUM_COLUMN_DIFF),
                    f'=SUM({column_letter}{start_row}:{column_letter}{end_row-1})', LIGHT_BLUE_FILL)
 
 
 def _add_all_branch_totals(sheet, start_row, end_row, column_index):
     set_cell_value(sheet.cell(row=end_row, column=column_index-1), "סה״כ בסניף", LIGHT_BLUE_FILL, adjust_width=True)
 
-    # Adjust the width of the column to text length
-    # __adjust_column_width_to_text(sheet, end_row, column_index-1)
-
     # set the escorts (active and vacation) counters
     for column in [column_index, column_index + 1, column_index + 2]:
         set_sum_formula_to_cell(sheet, start_row, end_row, column)
 
     # for the families counters the SUM formula counts also the teams total lines, so we need to divide it by 2
-    set_sum_formula_to_cell(sheet, start_row, end_row, column_index + 3, divide_by_2=True)
-    set_sum_formula_to_cell(sheet, start_row, end_row, column_index + 5, divide_by_2=True)
+    set_sum_formula_to_cell(sheet, start_row, end_row, column_index + READY_FAMILIES_SUM_COLUMN_DIFF, divide_by_2=True)
+    set_sum_formula_to_cell(sheet, start_row, end_row, column_index + ACTIVE_FAMILIES_SUM_COLUMN_DIFF, divide_by_2=True)
+
+    # just color rest of the row (for cosmetic reasons)
+    _color_empty_cells_in_totals_line(sheet, end_row, column_index)
 
 
 def __find_first_and_last_team_member_rows(sheet, start_row, team_leader, column_index):

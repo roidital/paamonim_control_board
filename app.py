@@ -12,10 +12,8 @@ app.secret_key = os.urandom(24)
 
 @app.route('/')
 def home():
-    # Call your main function here
-    # You might need to modify your script to return a string message instead of printing to the console
-    # result = main()  # Assuming main() is your script's function
     return redirect(url_for('do_login'))
+
 
 @app.route('/login', methods=['GET'])
 def login_form():

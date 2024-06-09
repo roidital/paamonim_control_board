@@ -1,10 +1,14 @@
 import re
 import openpyxl
 import datetime
-from src.common.common_utils import filter_unit_name_with_search_button, set_cell_value, __apply_border_to_team_table
+from src.common.common_utils import filter_unit_name_with_search_button, set_cell_value, __apply_border_to_team_table, \
+    __adjust_column_width_to_text
 from src.common.constants import URL_FAMILIES_STATUS_PAGE, LIGHT_BLUE_FILL, FAMILIES_SHEET_NAME, YELLOW_FILL, \
     FAMILIES_SHEET_FIRST_COLUMN_INDEX, FAMILIES_SHEET_LAST_COLUMN_INDEX, DAYS_WITHOUT_BUDGET_LIMIT, MAIN_LOGIN_URL, \
-    BUDGET_AND_BALANCES_PAGE
+    BUDGET_AND_BALANCES_PAGE, FAMILY_NAME, UNIT_NAME, CITY, LAST_MEETING_DATE, NEXT_MEETING_DATE, LAST_SHIKUF_BITSUA, \
+    LAST_OSH_STATS, TOTAL_DEBTS, MONTHLY_DEBTS_PAYMENT, UNSETTLED_DEBTS, BUDGET, CASE_AGE, NUM_OF_MEETINGS, \
+    NUM_CANCELLED_MEETINGS, BUDGET_INCOME, BUDGET_EXPENSE, BUDGET_DIFF, MONTH_INCOME, MONTH_EXPENSE, LAST_MONTH_DIFF, \
+    TUTOR
 from selenium.webdriver.common.by import By
 from collections import defaultdict
 import asyncio
@@ -25,13 +29,6 @@ def create_families_sheet(wb, sheet_name, browser, start_row, tutor_to_families,
     i = start_row
     family_data_dict = defaultdict(lambda: [])
     for (tutor, families) in tutor_to_families.items():
-        # create a header line for this tutor
-        # print(f'### tutor: {tutor} line {i}')
-        sheet.merge_cells(start_row=i, start_column=FAMILIES_SHEET_FIRST_COLUMN_INDEX, end_row=i, end_column=FAMILIES_SHEET_LAST_COLUMN_INDEX)
-        merged_cell = sheet.cell(row=i, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX)
-        set_cell_value(merged_cell, tutor, fill=LIGHT_BLUE_FILL)
-        i += 1
-
         # for each family of this tutor search for the family name in the html and copy relevant fields to excel
         for family in families:
             # find the row in the html that contains the family name
@@ -40,60 +37,19 @@ def create_families_sheet(wb, sheet_name, browser, start_row, tutor_to_families,
                 if family[0] in cells[0].text:
                     # get the the family's id number (from html)
                     family_id = row.get_attribute('id').split('_')[1]  # Get the id attribute
-                    #print(f'### family id: {family_id}')  # Print the number
                     retrieve_data_from_common_families_table(row, family_id, family_data_dict)
                     family_data_dict[family_id]['line_num'] = i
-                    set_cell_value(sheet.cell(row=i, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX),
-                                   family_data_dict[family_id]['unit_name'], adjust_width=True)
-                    set_cell_value(sheet.cell(row=i, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX+1),
-                                   family_data_dict[family_id]['family_name'], adjust_width=True)
-                    set_cell_value(sheet.cell(row=i, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX+2),
-                                   family_data_dict[family_id]['city'], adjust_width=True)
-                    set_cell_value(sheet.cell(row=i, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX+3),
-                                   family_data_dict[family_id]['case_age'], adjust_width=True)
-                    set_cell_value(sheet.cell(row=i, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX+4),
-                                   family_data_dict[family_id]['last_meeting_date'], adjust_width=True)
-                    set_cell_value(sheet.cell(row=i, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX+5),
-                                   family_data_dict[family_id]['next_meeting_date'], adjust_width=True)
-                    set_cell_value(sheet.cell(row=i, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX+6),
-                                   family_data_dict[family_id]['num_of_meetings'], adjust_width=True)
-                    if 'num_cancelled_meetings' in family_data_dict[family_id]:
-                        set_cell_value(sheet.cell(row=i, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX+7),
-                                       family_data_dict[family_id]['num_cancelled_meetings'], adjust_width=True)
-                    set_cell_value(sheet.cell(row=i, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX+17),
-                                   family_data_dict[family_id]['last_osh_stats'], adjust_width=True)
+                    set_values_from_common_families_table_to_excel(family_data_dict[family_id], sheet)
 
                     num_skip_lines = write_family_alerts(family_data_dict[family_id], sheet, i)
                     i += num_skip_lines if num_skip_lines > 0 else 1
                     break
+    # retrieve the budget and balances data for each family (parallel execution)
     asyncio.run(browser_dispatcher(family_data_dict, username, password))
-    #print(f'### AFTER family_data_dict: {family_data_dict}')
+    # print(f'### AFTER family_data_dict: {family_data_dict}')
+
     for family_id in family_data_dict.keys():
-        line_num = family_data_dict[family_id]['line_num']
-        if 'budget_income' in family_data_dict[family_id]:
-            set_cell_value(sheet.cell(row=line_num, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 8),
-                           family_data_dict[family_id]['budget_income'], adjust_width=True)
-        if 'budget_expense' in family_data_dict[family_id]:
-            set_cell_value(sheet.cell(row=line_num, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 9),
-                           family_data_dict[family_id]['budget_expense'], adjust_width=True)
-        if 'budget_diff' in family_data_dict[family_id]:
-            set_cell_value(sheet.cell(row=line_num, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 10),
-                           family_data_dict[family_id]['budget_diff'], adjust_width=True)
-        set_cell_value(sheet.cell(row=line_num, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 11),
-                       family_data_dict[family_id]['total_debts'], adjust_width=True)
-        set_cell_value(sheet.cell(row=line_num, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 12),
-                       family_data_dict[family_id]['monthly_debts_payment'], adjust_width=True)
-        set_cell_value(sheet.cell(row=line_num, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 13),
-                       family_data_dict[family_id]['unsettled_debts'], adjust_width=True)
-        if 'month_income' in family_data_dict[family_id]:
-            set_cell_value(sheet.cell(row=line_num, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 14),
-                           family_data_dict[family_id]['month_income'], adjust_width=True)
-        if 'month_expense' in family_data_dict[family_id]:
-            set_cell_value(sheet.cell(row=line_num, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 15),
-                           family_data_dict[family_id]['month_expense'], adjust_width=True)
-        if 'last_month_diff' in family_data_dict[family_id]:
-            set_cell_value(sheet.cell(row=line_num, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 16),
-                           family_data_dict[family_id]['last_month_diff'], adjust_width=True)
+        set_budget_and_balances_to_excel(family_data_dict[family_id], sheet)
 
     num_of_table_rows = i
     __apply_border_to_team_table(wb[FAMILIES_SHEET_NAME], 1, num_of_table_rows - 1,
@@ -106,33 +62,87 @@ def retrieve_data_from_common_families_table(row, family_id, family_data_dict):
     cells = row.find_elements(By.TAG_NAME, "td")
     if cells[0].text:
         # todo: consider moving the keys in the inner dict to constants in constants.py
-        family_data_dict[family_id] = {'family_name': cells[0].text,
-                                       'unit_name': cells[1].text,
-                                       'city': cells[2].text,
-                                       'last_meeting_date': cells[12].text,
-                                       'next_meeting_date': cells[13].text,
-                                       # 'num_of_meetings': cells[14].text,
-                                       #  'num_cancelled_meetings': cells[14].text,
-                                       'last_shikuf_bitsua': cells[7].text,
-                                       'last_osh_stats': cells[15].text,
-                                       'total_debts': cells[9].text,
-                                       'monthly_debts_payment': cells[11].text,
-                                       'unsettled_debts': cells[10].text,
-                                       'budget': cells[8].text,
-                                       'case_age': cells[6].text}
+        family_data_dict[family_id] = {FAMILY_NAME: cells[0].text,
+                                       UNIT_NAME: cells[1].text,
+                                       CITY: cells[2].text,
+                                       TUTOR: cells[3].text,
+                                       LAST_MEETING_DATE: cells[12].text,
+                                       NEXT_MEETING_DATE: cells[13].text,
+                                       LAST_SHIKUF_BITSUA: cells[7].text,
+                                       LAST_OSH_STATS: cells[15].text,
+                                       TOTAL_DEBTS: cells[9].text,
+                                       MONTHLY_DEBTS_PAYMENT: cells[11].text,
+                                       UNSETTLED_DEBTS: cells[10].text,
+                                       BUDGET: cells[8].text,
+                                       CASE_AGE: cells[6].text}
         # parse the number of meetings and the number of cancelled meetings from the format "num_meetings (num_cancelled_meetings)"
         match = re.match(r"(\d+) \((\d+)\)", cells[14].text)
         if match:
-            family_data_dict[family_id]['num_of_meetings'] = match.group(1)
-            family_data_dict[family_id]['num_cancelled_meetings'] = match.group(2)
+            family_data_dict[family_id][NUM_OF_MEETINGS] = match.group(1)
+            family_data_dict[family_id][NUM_CANCELLED_MEETINGS] = match.group(2)
         else:
-            family_data_dict[family_id]['num_of_meetings'] = cells[14].text
+            family_data_dict[family_id][NUM_OF_MEETINGS] = cells[14].text
+
+
+def set_values_from_common_families_table_to_excel(family_data, sheet):
+    row = family_data['line_num']
+    set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX),
+                   family_data[UNIT_NAME], adjust_width=True)
+    set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 1),
+                   family_data[TUTOR], adjust_width=True)
+    set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 2),
+                   family_data[FAMILY_NAME], adjust_width=True)
+    set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 3),
+                   family_data[CITY], adjust_width=True)
+    set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 4),
+                   family_data[CASE_AGE], adjust_width=True)
+    set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 5),
+                   family_data[LAST_MEETING_DATE], adjust_width=True)
+    set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 6),
+                   family_data[NEXT_MEETING_DATE], adjust_width=True)
+    set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 7),
+                   family_data[NUM_OF_MEETINGS], adjust_width=True)
+    if NUM_CANCELLED_MEETINGS in family_data:
+        set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 8),
+                       family_data[NUM_CANCELLED_MEETINGS], adjust_width=True)
+    set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 18),
+                   family_data[LAST_OSH_STATS], adjust_width=True)
+
+
+def set_budget_and_balances_to_excel(family_data, sheet):
+    row = family_data['line_num']
+    if BUDGET_INCOME in family_data:
+        set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 9),
+                       family_data[BUDGET_INCOME], adjust_width=True)
+    if BUDGET_EXPENSE in family_data:
+        set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 10),
+                       family_data[BUDGET_EXPENSE], adjust_width=True)
+    if BUDGET_DIFF in family_data:
+        set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 11),
+                       family_data[BUDGET_DIFF], adjust_width=True)
+    set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 12),
+                   family_data[TOTAL_DEBTS], adjust_width=True)
+    set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 13),
+                   family_data[MONTHLY_DEBTS_PAYMENT], adjust_width=True)
+    set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 14),
+                   family_data[UNSETTLED_DEBTS], adjust_width=True)
+    if MONTH_INCOME in family_data:
+        set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 15),
+                       family_data[MONTH_INCOME], adjust_width=True)
+    if MONTH_EXPENSE in family_data:
+        set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 16),
+                       family_data[MONTH_EXPENSE], adjust_width=True)
+    if LAST_MONTH_DIFF in family_data:
+        set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 17),
+                       family_data[LAST_MONTH_DIFF], adjust_width=True)
 
 
 async def auto_login(username, password):
     options = {
         'ignoreHTTPSErrors': True,
         'args': ['--no-sandbox'],
+        # since we are using Flask to launch this webapp - this flow is not running in main thread, in python signals
+        # can be set only in main thread, so we need to disable the signals handling
         'handleSIGINT': False,
         'handleSIGTERM': False,
         'handleSIGHUP': False
@@ -143,7 +153,9 @@ async def auto_login(username, password):
     # navigate to the login page
     await page.goto(MAIN_LOGIN_URL)
 
-    # Perform login
+    # Perform login, since these are the same username and password used for the initial login, we are not supposed
+    # to reach here unless the login was successful, however it's better to check for a failed login and handle it (although not expected)
+    # todo: add a check for a failed login
     await page.type('input[name=login]', username)
     await page.type('input[name=password]', password)
     await page.click('#loginBtn')
@@ -158,7 +170,10 @@ async def browser_dispatcher(family_data_dict, username, password):
     # Perform login
     browser = await auto_login(username, password)
 
-    tasks = [fetch_family_data(browser, family_id, family_data_dict) for family_id in family_data_dict.keys() if family_data_dict[family_id]['last_shikuf_bitsua'] != '']
+    # in case the family doesn't have a shikuf/bitsua - it means the BUDGET_AND_BALANCES_PAGE page doesn't exist
+    # which will follow a timeout exception in the fetch_family_data function
+    tasks = [fetch_family_data(browser, family_id, family_data_dict) for family_id in family_data_dict.keys()
+             if family_data_dict[family_id]['last_shikuf_bitsua'] != '']
     pages_content = await asyncio.gather(*tasks)
 
     for page_content in pages_content:
@@ -182,47 +197,47 @@ async def fetch_family_data(browser, family_id, family_data_dict):
             const td = document.querySelector('#sumTable tr.incomeTitle td.sumLine1Col1');
             return td ? td.innerHTML : null;
         }''')
-    print(f'### income: {budget_income}')
-    family_data_dict[family_id]['budget_income'] = budget_income
+    # print(f'### income: {budget_income}')
+    family_data_dict[family_id][BUDGET_INCOME] = budget_income
     budget_expense = await page.evaluate('''() => {
                 const td = document.querySelector('#sumTable tr.expenseTitle td.sumLine2Col1');
                 return td ? td.innerHTML : null;
             }''')
-    print(f'### expense: {budget_expense}')
-    family_data_dict[family_id]['budget_expense'] = budget_expense
+    # print(f'### expense: {budget_expense}')
+    family_data_dict[family_id][BUDGET_EXPENSE] = budget_expense
     if budget_income and budget_expense:
-        print(f'### budget diff: {int(budget_income) - int(budget_expense)}')
-        family_data_dict[family_id]['budget_diff'] = int(budget_income) - int(budget_expense)
+        # print(f'### budget diff: {int(budget_income) - int(budget_expense)}')
+        family_data_dict[family_id][BUDGET_DIFF] = int(budget_income) - int(budget_expense)
     month_income = await page.evaluate('''() => {
                     const td = document.querySelector('#sumTable tr.incomeTitle td.sumLine1Col3');
                     return td ? td.innerHTML : null;
                 }''')
-    print(f'### last month income: {month_income}')
-    family_data_dict[family_id]['month_income'] = month_income
+    # print(f'### last month income: {month_income}')
+    family_data_dict[family_id][MONTH_INCOME] = month_income
     month_expense = await page.evaluate('''() => {
                         const td = document.querySelector('#sumTable tr.expenseTitle td.sumLine2Col3');
                         return td ? td.innerHTML : null;
                     }''')
-    print(f'### last month expense: {month_expense}')
-    family_data_dict[family_id]['month_expense'] = month_expense
+    # print(f'### last month expense: {month_expense}')
+    family_data_dict[family_id][MONTH_EXPENSE] = month_expense
     if month_income and month_expense:
-        print(f'### last month diff: {int(month_income) - int(month_expense)}')
-        family_data_dict[family_id]['last_month_diff'] = int(month_income) - int(month_expense)
+        # print(f'### last month diff: {int(month_income) - int(month_expense)}')
+        family_data_dict[family_id][LAST_MONTH_DIFF] = int(month_income) - int(month_expense)
 
     await page.close()
     return 'done with family_id: ' + family_id
 
 
-def write_family_alerts(cells, sheet, row):
-    print(f'### alerts. cells: {cells}')
+def write_family_alerts(family_data, sheet, row):
+    print(f'### alerts. cells: {family_data}')
     alerts = []
-    if not cells['budget'] and int(cells['case_age'].split()[0]) > DAYS_WITHOUT_BUDGET_LIMIT:
+    if not family_data[BUDGET] and int(family_data[CASE_AGE].split()[0]) > DAYS_WITHOUT_BUDGET_LIMIT:
         alerts.append("ליווי בן יותר מ-45 יום ועדיין ללא תקציב ")
-    if not cells['last_meeting_date'].strip():
+    if not family_data[LAST_MEETING_DATE].strip():
         alerts.append("אין פגישה אחרונה בתיק")
     else:
         # parse the date string
-        last_meeting_date = datetime.datetime.strptime(cells['last_meeting_date'].strip(), "%d-%m-%y")
+        last_meeting_date = datetime.datetime.strptime(family_data[LAST_MEETING_DATE].strip(), "%d-%m-%y")
         # get the current date
         current_date = datetime.datetime.now()
         # get the current month and the previous month
@@ -232,17 +247,13 @@ def write_family_alerts(cells, sheet, row):
         if last_meeting_date.month != current_month and last_meeting_date.month != previous_month:
             alerts.append(
                 f'לא התקיימה פגישה בחודש הנוכחי או הקודם')
-    if not cells['next_meeting_date'].strip():
+    if not family_data[NEXT_MEETING_DATE].strip():
         alerts.append("לא נקבעה הפגישה הבאה")
 
     for i, alert in enumerate(alerts, start=1):
         if i > 1:
             sheet.insert_rows(row + i - 1)
-        set_cell_value(sheet.cell(row=row + i - 1, column=FAMILIES_SHEET_LAST_COLUMN_INDEX), alert, fill=YELLOW_FILL)
-        # Adjust the width of the column to text length #todo: put this adjustment into a function
-        column_letter = openpyxl.utils.get_column_letter(FAMILIES_SHEET_LAST_COLUMN_INDEX)
-        if len(sheet.cell(row + i - 1, FAMILIES_SHEET_LAST_COLUMN_INDEX).value) > sheet.column_dimensions[column_letter].width:
-            sheet.column_dimensions[column_letter].width = len(sheet.cell(row+i-1, FAMILIES_SHEET_LAST_COLUMN_INDEX).value)
+        set_cell_value(sheet.cell(row=row + i - 1, column=FAMILIES_SHEET_LAST_COLUMN_INDEX), alert, fill=YELLOW_FILL, adjust_width=True)
 
-    print(f'### alerts for family {cells["family_name"]}: {alerts}')
+    print(f'### alerts for family {family_data[FAMILY_NAME]}: {alerts}')
     return len(alerts)
