@@ -39,6 +39,7 @@ def filter_unit_name_no_search_button(browser, filter_by, unit_name):
 
     # count the rows before filtering the table
     current_row_count = len(browser.find_elements(By.XPATH, f'.//tr[starts-with(@id, {filter_by})]'))
+    # print(f'### current_row_count: {current_row_count}')
 
     try:
         option = WebDriverWait(browser, 5).until(EC.visibility_of_element_located((By.XPATH, f'//div[@class="betterselecter-op" and contains(text(), "{unit_name}")]')))
@@ -51,11 +52,12 @@ def filter_unit_name_no_search_button(browser, filter_by, unit_name):
 
     def __rows_have_updated(browser):
         new_row_count = len(browser.find_elements(By.XPATH, f'.//tr[starts-with(@id, {filter_by})]'))
+        # print(f'### new_row_count: {new_row_count}')
         return new_row_count != current_row_count
 
     # wait for the table to be updated after unit filter
     try:
-        WebDriverWait(browser, 10).until(__rows_have_updated)
+        WebDriverWait(browser, 5).until(__rows_have_updated)
     except TimeoutException:
         print("got timeout while waiting for rows number to change")
 

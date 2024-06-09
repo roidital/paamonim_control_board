@@ -66,6 +66,10 @@ def retrieve_team_list(browser, unit_name, url_page, with_search_button=False, f
         if len(split_text) > 1:
             team_list[split_text[1]].add(cells[1].text if cells[1].text else current_user)
 
+    # in case it's vacation team members page, team leader is not necessarily in the list (usually not)
+    if url_page == ULR_VACATION_TEAM_MEMBERS:
+        return team_list
+
     # filter out all unrelated units such as (מאגר משפחות לליווי, שם הסניף וכו׳)
     return {key: value for key, value in team_list.items() if key in team_list[key]}
 
