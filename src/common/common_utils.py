@@ -19,12 +19,15 @@ def normalize_string(s):
     return unicodedata.normalize("NFD", s).casefold()
 
 
-def set_cell_value(cell, value, fill=None, font=BOLD_FONT, adjust_width=False):
+def set_cell_value(cell, value, fill=None, font=BOLD_FONT, adjust_width=False, wrap_text=False):
     cell.value = value
     cell.font = font
     if fill:
         cell.fill = fill
-    cell.alignment = Alignment(horizontal='center', vertical='center')
+    if wrap_text:
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    else:
+        cell.alignment = Alignment(horizontal='center', vertical='center')
     if adjust_width:
         __adjust_column_width_to_text(cell)
 
@@ -134,3 +137,9 @@ def __adjust_column_width_to_text(cell):
     cell_value_str = str(cell.value)
     if len(cell_value_str) > cell.parent.column_dimensions[column_letter].width:
         cell.parent.column_dimensions[column_letter].width = len(cell_value_str) * 1.1
+
+
+def __adjust_row_height_to_text(cell):
+    cell_value_str = str(cell.value)
+    if len(cell_value_str) > cell.parent.row_dimensions[cell.row].height:
+        cell.parent.row_dimensions[cell.row].height = len(cell_value_str) * 1.1

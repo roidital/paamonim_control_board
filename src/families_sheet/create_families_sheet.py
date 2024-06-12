@@ -41,8 +41,8 @@ def create_families_sheet(wb, sheet_name, browser, start_row, tutor_to_families,
                     family_data_dict[family_id]['line_num'] = i
                     set_values_from_common_families_table_to_excel(family_data_dict[family_id], sheet)
 
-                    num_skip_lines = write_family_alerts(family_data_dict[family_id], sheet, i)
-                    i += num_skip_lines if num_skip_lines > 0 else 1
+                    write_family_alerts(family_data_dict[family_id], sheet, i)
+                    i += 1
                     break
     # retrieve the budget and balances data for each family (parallel execution)
     asyncio.run(browser_dispatcher(family_data_dict, username, password))
@@ -238,22 +238,19 @@ def write_family_alerts(family_data, sheet, row):
     else:
         # parse the date string
         last_meeting_date = datetime.datetime.strptime(family_data[LAST_MEETING_DATE].strip(), "%d-%m-%y")
-        # get the current date
         current_date = datetime.datetime.now()
-        # get the current month and the previous month
         current_month = current_date.month
         previous_month = current_month - 1 if current_month != 1 else 12
-        # if the last meeting date's month is not the same as the current month or the previous month, print the alert
+        # if the last meeting date's month is not the same as the current month or the previous month, add an alert
         if last_meeting_date.month != current_month and last_meeting_date.month != previous_month:
             alerts.append(
                 f'לא התקיימה פגישה בחודש הנוכחי או הקודם')
     if not family_data[NEXT_MEETING_DATE].strip():
         alerts.append("לא נקבעה הפגישה הבאה")
 
-    for i, alert in enumerate(alerts, start=1):
-        if i > 1:
-            sheet.insert_rows(row + i - 1)
-        set_cell_value(sheet.cell(row=row + i - 1, column=FAMILIES_SHEET_LAST_COLUMN_INDEX), alert, fill=YELLOW_FILL, adjust_width=True)
+    # concat all the alerts into one string with a new line separator
+    alerts = '\n'.join(alerts)
+    if alerts:
+        set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_LAST_COLUMN_INDEX), alerts, fill=YELLOW_FILL, adjust_width=True, wrap_text=True)
 
     print(f'### alerts for family {family_data[FAMILY_NAME]}: {alerts}')
-    return len(alerts)
