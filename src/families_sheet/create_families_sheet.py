@@ -8,7 +8,7 @@ from src.common.constants import URL_FAMILIES_STATUS_PAGE, LIGHT_BLUE_FILL, FAMI
     BUDGET_AND_BALANCES_PAGE, FAMILY_NAME, UNIT_NAME, CITY, LAST_MEETING_DATE, NEXT_MEETING_DATE, LAST_SHIKUF_BITSUA, \
     LAST_OSH_STATS, TOTAL_DEBTS, MONTHLY_DEBTS_PAYMENT, UNSETTLED_DEBTS, BUDGET, CASE_AGE, NUM_OF_MEETINGS, \
     NUM_CANCELLED_MEETINGS, BUDGET_INCOME, BUDGET_EXPENSE, BUDGET_DIFF, MONTH_INCOME, MONTH_EXPENSE, LAST_MONTH_DIFF, \
-    TUTOR
+    TUTOR, DAYS_WITHOUT_FIRST_MEETING_LIMIT
 from selenium.webdriver.common.by import By
 from collections import defaultdict
 import asyncio
@@ -234,7 +234,8 @@ def write_family_alerts(family_data, sheet, row):
     if not family_data[BUDGET] and int(family_data[CASE_AGE].split()[0]) > DAYS_WITHOUT_BUDGET_LIMIT:
         alerts.append("ליווי בן יותר מ-45 יום ועדיין ללא תקציב ")
     if not family_data[LAST_MEETING_DATE].strip():
-        alerts.append("אין פגישה אחרונה בתיק")
+        if int(family_data[CASE_AGE].split()[0]) > DAYS_WITHOUT_FIRST_MEETING_LIMIT:
+            alerts.append("אין פגישה אחרונה בתיק שמתנהל מעל 30 יום")
     else:
         # parse the date string
         last_meeting_date = datetime.datetime.strptime(family_data[LAST_MEETING_DATE].strip(), "%d-%m-%y")
@@ -247,6 +248,12 @@ def write_family_alerts(family_data, sheet, row):
                 f'לא התקיימה פגישה בחודש הנוכחי או הקודם')
     if not family_data[NEXT_MEETING_DATE].strip():
         alerts.append("לא נקבעה הפגישה הבאה")
+    if MONTH_INCOME in family_data and BUDGET_INCOME in family_data:
+        if family_data[MONTH_INCOME] < float(family_data[BUDGET_INCOME]*0.75):
+            alerts.append("הכנסה חודשית נמוכה מ-75% מהתקציב החודשי")
+    if MONTH_EXPENSE in family_data and BUDGET_EXPENSE in family_data:
+        if family_data[MONTH_EXPENSE] > float(family_data[BUDGET_EXPENSE]*1.3):
+            alerts.append("הוצאה חודשית גבוהה ביותר מ-30% מהתקציב החודשי")
 
     # concat all the alerts into one string with a new line separator
     alerts = '\n'.join(alerts)
