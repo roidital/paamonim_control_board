@@ -1,11 +1,12 @@
 import re
 import openpyxl
-from src.common.common_utils import set_cell_value, __find_header_index, filter_unit_name_with_search_button, \
+from src.common.common_utils import set_cell_value, filter_unit_name_with_search_button, \
     filter_unit_name_no_search_button, __apply_border_to_team_table, set_sum_formula_to_cell
 from src.common.constants import URL_ACTIVE_TEAM_MEMBERS, TEAMS_LIST_SHEET_NAME, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, \
-    HEADER_NAME, \
     ULR_VACATION_TEAM_MEMBERS, URL_FAMILIES_STATUS_PAGE, CHECK_MARK, FamilyStatus, LIGHT_BLUE_FILL, \
-    TUTOR_COLUMN_IN_TEAMS_SHEET, READY_FAMILIES_SUM_COLUMN_DIFF, ACTIVE_FAMILIES_SUM_COLUMN_DIFF
+    TUTOR_COLUMN_IN_TEAMS_SHEET, READY_FAMILIES_SUM_COLUMN_DIFF, ACTIVE_FAMILIES_SUM_COLUMN_DIFF, \
+    TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX, ACTIVE_FAMILY_COUNT_COLUMN_SHIFT, ACTIVE_FAMILY_LIST_COLUMN_SHIFT, \
+    READY_FAMILY_COUNT_COLUMN_SHIFT, READY_FAMILY_LIST_COLUMN_SHIFT
 from collections import defaultdict
 from selenium.webdriver.common.by import By
 from openpyxl.styles import Font, Alignment, Color
@@ -15,34 +16,35 @@ def create_teams_list_sheet(browser, unit_name, wb):
     active_team_list = retrieve_team_list(browser, unit_name, URL_ACTIVE_TEAM_MEMBERS)
     print(f'active team list: {active_team_list}')
 
+    sheet = wb[TEAMS_LIST_SHEET_NAME]
     # add active team members to the excel file
-    update_wb_active_team_members(wb, TEAMS_LIST_SHEET_NAME, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, HEADER_NAME, active_team_list)
+    update_wb_active_team_members(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, active_team_list)
 
     vacation_team_list = retrieve_team_list(browser, unit_name, ULR_VACATION_TEAM_MEMBERS)
     print(f'vacation team list: {vacation_team_list}')
 
     # add vacation team members to the excel file
-    update_wb_vacation_team_members(wb, TEAMS_LIST_SHEET_NAME, HEADER_NAME, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, vacation_team_list)
+    update_wb_vacation_team_members(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, vacation_team_list)
 
-    tutor_to_families, team_leader_to_families = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE, FamilyStatus.ACTIVE)
+    tutor_to_families, team_leader_to_families = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
+                                                                        FamilyStatus.ACTIVE)
     # print(f'team_leader_to_families: {team_leader_to_families}')
 
-    # todo: add column index instead of hard coded '5' and '6'
     # add the amount of active families + links (per tutor) to the excel file
-    update_wb_families_status(wb, TEAMS_LIST_SHEET_NAME, HEADER_NAME, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM,
-                              5, 6, tutor_to_families)
+    update_wb_families_status(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, ACTIVE_FAMILY_COUNT_COLUMN_SHIFT,
+                              ACTIVE_FAMILY_LIST_COLUMN_SHIFT, tutor_to_families)
 
-    tutor_to_ready_families, _ = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE, FamilyStatus.READY_TO_START)
+    tutor_to_ready_families, _ = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
+                                                        FamilyStatus.READY_TO_START)
     print(f'ready to start families list: {tutor_to_ready_families}')
 
-    # todo: add column index instead of hard coded '3' and '4'
-    update_wb_families_status(wb, TEAMS_LIST_SHEET_NAME, HEADER_NAME, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, 3, 4, tutor_to_ready_families)
+    update_wb_families_status(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, READY_FAMILY_COUNT_COLUMN_SHIFT,
+                              READY_FAMILY_LIST_COLUMN_SHIFT, tutor_to_ready_families)
 
-    insert_totals(wb, TEAMS_LIST_SHEET_NAME, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, HEADER_NAME)
+    insert_totals(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM)
 
     # apply borders to all team tables
-    apply_borders_to_all_teams(wb, TEAMS_LIST_SHEET_NAME, HEADER_NAME, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM,
-                               {**active_team_list, **vacation_team_list})
+    apply_borders_to_all_teams(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM,{**active_team_list, **vacation_team_list})
     # return tutor_to_families since it's required in create_families_sheet() called from main
     return team_leader_to_families
 
@@ -74,11 +76,9 @@ def retrieve_team_list(browser, unit_name, url_page, with_search_button=False, f
     return {key: value for key, value in team_list.items() if key in team_list[key]}
 
 
-def apply_borders_to_all_teams(wb, sheet_name, header_name, start_row, team_list):
-    sheet = wb[sheet_name]
-
+def apply_borders_to_all_teams(sheet, start_row, team_list):
     # Find the column index of the header
-    column_index = __find_header_index(sheet, header_name)
+    column_index = TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX # __find_header_index(sheet, header_name)
 
     # Iterate over each team leader in the all_teams
     for team_leader in team_list.keys():
@@ -90,14 +90,9 @@ def apply_borders_to_all_teams(wb, sheet_name, header_name, start_row, team_list
         __apply_border_to_team_table(sheet, team_leader_row, last_team_member_row, column_index, 7)
 
 
-def update_wb_active_team_members(wb, sheet_name, start_row, header_name, team_list):
-    # Select the active sheet
-    sheet = wb[sheet_name]
-
+def update_wb_active_team_members(sheet, start_row, team_list):
     # Find the column index of the header
-    column_index = __find_header_index(sheet, header_name)
-    if column_index is None:
-        return
+    column_index = TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX #__find_header_index(sheet, header_name)
 
     # Add new cells to the column
     i = start_row
@@ -115,12 +110,9 @@ def update_wb_active_team_members(wb, sheet_name, start_row, header_name, team_l
         i += 2  # Leave two empty rows to separate between team tables in the excel file
 
 
-def update_wb_vacation_team_members(wb, sheet_name, header_name, start_row, team_list):
-    # Select the active sheet
-    sheet = wb[sheet_name]
-
+def update_wb_vacation_team_members(sheet, start_row, team_list):
     # Find the column index of the header
-    column_index = __find_header_index(sheet, header_name)
+    column_index = TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX #__find_header_index(sheet, header_name)
 
     # Iterate over each team leader in the team_list
     for team_leader, team_members in team_list.items():
@@ -157,11 +149,9 @@ def collect_tutor_families(browser, unit_name, url_page, family_status):
     return active_families_list, team_leader_to_families
 
 
-def update_wb_families_status(wb, sheet_name, header_name, start_row, family_count_column_shift, family_list_column_shift, tutor_to_families):
-    sheet = wb[sheet_name]
-
+def update_wb_families_status(sheet, start_row, family_count_column_shift, family_list_column_shift, tutor_to_families):
     # Find the column index of the header
-    column_index = __find_header_index(sheet, header_name)
+    column_index = TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX # __find_header_index(sheet, header_name)
 
     for row in range(start_row, sheet.max_row + 1):
         # Check if the cell in the escort person column is valid for parsing
@@ -196,12 +186,9 @@ def update_wb_families_status(wb, sheet_name, header_name, start_row, family_cou
     sheet.column_dimensions[column_letter].width = sheet.column_dimensions[column_letter].width * 2
 
 
-def insert_totals(wb, sheet_name, start_row, header_name):
-    # Select the active sheet
-    sheet = wb[sheet_name]
-
+def insert_totals(sheet, start_row):
     # Find the column index of the header
-    column_index = __find_header_index(sheet, header_name)
+    column_index = TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX #__find_header_index(sheet, header_name)
 
     # Initialize counters
     total_counter = 0

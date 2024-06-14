@@ -122,14 +122,14 @@ def __apply_border_to_team_table(sheet, start_row, end_row, first_column_index, 
         sheet.cell(row=row, column=first_column_index + last_column_shift).border = RIGHT_BORDER
 
 
-def __find_header_index(sheet, header_name):
-    for col in range(1, sheet.max_column + 1):
-        cell_value = sheet.cell(row=HEADERS_ROW_NUM, column=col).value
-        if cell_value and normalize_string(cell_value) == normalize_string(header_name):
-            return col
-
-    print(f"Header '{header_name}' not found.")
-    return None
+# def __find_header_index(sheet, header_name):
+#     for col in range(1, sheet.max_column + 1):
+#         cell_value = sheet.cell(row=HEADERS_ROW_NUM, column=col).value
+#         if cell_value and normalize_string(cell_value) == normalize_string(header_name):
+#             return col
+#
+#     print(f"Header '{header_name}' not found.")
+#     return None
 
 
 def __adjust_column_width_to_text(cell):

@@ -12,7 +12,6 @@ URL_FAMILIES_STATUS_PAGE: Final[str] = 'https://app.paamonim.org.il/budgets'
 
 # Excel constants
 EXCEL_FILENAME: Final[str] = "../cockpit.xlsx"
-HEADER_NAME: Final[str] = "שם"
 TEAMS_LIST_SHEET_NAME: Final[str] = "צוותים"
 FAMILIES_SHEET_NAME: Final[str] = "דוח משפחות"
 
@@ -27,6 +26,11 @@ DAYS_WITHOUT_BUDGET_LIMIT: Final[int] = 45
 DAYS_WITHOUT_FIRST_MEETING_LIMIT: Final[int] = 30
 READY_FAMILIES_SUM_COLUMN_DIFF: Final[int] = 3
 ACTIVE_FAMILIES_SUM_COLUMN_DIFF: Final[int] = 5
+TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX: Final[int] = 6
+ACTIVE_FAMILY_COUNT_COLUMN_SHIFT: Final[int] = 5
+ACTIVE_FAMILY_LIST_COLUMN_SHIFT: Final[int] = 6
+READY_FAMILY_COUNT_COLUMN_SHIFT: Final[int] = 3
+READY_FAMILY_LIST_COLUMN_SHIFT: Final[int] = 4
 
 # family data fields names
 FAMILY_NAME: Final[str] = "family_name"
