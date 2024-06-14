@@ -17,7 +17,7 @@ import nest_asyncio
 nest_asyncio.apply()
 
 
-def create_families_sheet(wb, sheet_name, browser, start_row, tutor_to_families, unit_name, username, password):
+def create_families_sheet(wb, sheet_name, browser, start_row, team_leader_to_families, unit_name, username, password):
     # to reset the checkboxes checked by previous steps
     browser.get(URL_FAMILIES_STATUS_PAGE)
     filter_unit_name_with_search_button(browser, unit_name)
@@ -28,13 +28,13 @@ def create_families_sheet(wb, sheet_name, browser, start_row, tutor_to_families,
 
     i = start_row
     family_data_dict = defaultdict(lambda: [])
-    for (tutor, families) in tutor_to_families.items():
+    for (team_leader, families) in team_leader_to_families.items():
         # for each family of this tutor search for the family name in the html and copy relevant fields to excel
         for family in families:
             # find the row in the html that contains the family name
             for row in rows:
                 cells = row.find_elements(By.TAG_NAME, "td")
-                if family[0] in cells[0].text:
+                if family in cells[0].text:
                     # get the the family's id number (from html)
                     family_id = row.get_attribute('id').split('_')[1]  # Get the id attribute
                     retrieve_data_from_common_families_table(row, family_id, family_data_dict)
@@ -229,7 +229,7 @@ async def fetch_family_data(browser, family_id, family_data_dict):
 
 
 def write_family_alerts(family_data, sheet, row):
-    print(f'### alerts. cells: {family_data}')
+    # print(f'### alerts. cells: {family_data}')
     alerts = []
     if not family_data[BUDGET] and int(family_data[CASE_AGE].split()[0]) > DAYS_WITHOUT_BUDGET_LIMIT:
         alerts.append("ליווי בן יותר מ-45 יום ועדיין ללא תקציב ")
@@ -260,4 +260,4 @@ def write_family_alerts(family_data, sheet, row):
     if alerts:
         set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_LAST_COLUMN_INDEX), alerts, fill=YELLOW_FILL, adjust_width=True, wrap_text=True)
 
-    print(f'### alerts for family {family_data[FAMILY_NAME]}: {alerts}')
+    # print(f'### alerts for family {family_data[FAMILY_NAME]}: {alerts}')

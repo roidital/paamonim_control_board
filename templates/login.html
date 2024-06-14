@@ -23,6 +23,20 @@
         label {
             color: blue; /* Color the text of the labels in blue */
         }
+        .checkbox-label {
+            font-size: 30px;
+            color: black;
+        }
+        .checkbox {
+            transform: scale(1.5); /* Adjust the size as needed */
+        }
+        .parantheses_label {
+            font-size: 20px;
+            color: black;
+        }
+        .submit_button {
+            font-size: 25px;
+        }
         #loadingMessage {
             display: none;
         }
@@ -49,7 +63,12 @@
             <input type="password" id="password" name="password"><br>
             <label for="unit_name">'מה שמך כפי שהוא מופיע במערכת, למשל עבור 'מרכז שרון - רועי דיטל' פשוט רשום 'רועי דיטל</label><br>
             <input type="text" id="unit_name" name="unit_name"><br>
-            <input type="submit" value="Submit">
+            <label for="create_teams_list_sheet" class="checkbox-label">צור גיליון צוותים</label>
+            <input type="checkbox" id="create_teams_list_sheet" name="create_teams_list_sheet" class="checkbox" checked><br>
+            <label for="create_families_sheet" class="checkbox-label">צור דוח משפחות</label>
+            <input type="checkbox" id="create_families_sheet" name="create_families_sheet" class="checkbox" checked><br>
+            <label class="parantheses_label">(אם אינך צריכ/ה את שני הגיליונות סמנ/י רק את הגיליון הנדרש זה יחסוך זמן ביצירת האקסל)</label><br>
+            <input type="submit" value="צור אקסל" class="submit_button">
         </form>
         <div id="loadingMessage">
             ...האקסל שלך בהכנה, חשוב שלא לסגור את חלון הדפדפן הזה עד שהפעולה תסתיים, לוקח בערך דקה

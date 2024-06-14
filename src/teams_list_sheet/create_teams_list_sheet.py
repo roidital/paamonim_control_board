@@ -24,15 +24,15 @@ def create_teams_list_sheet(browser, unit_name, wb):
     # add vacation team members to the excel file
     update_wb_vacation_team_members(wb, TEAMS_LIST_SHEET_NAME, HEADER_NAME, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, vacation_team_list)
 
-    tutor_to_families = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE, FamilyStatus.ACTIVE)
-    print(f'active families list: {tutor_to_families}')
+    tutor_to_families, team_leader_to_families = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE, FamilyStatus.ACTIVE)
+    # print(f'team_leader_to_families: {team_leader_to_families}')
 
     # todo: add column index instead of hard coded '5' and '6'
     # add the amount of active families + links (per tutor) to the excel file
     update_wb_families_status(wb, TEAMS_LIST_SHEET_NAME, HEADER_NAME, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM,
                               5, 6, tutor_to_families)
 
-    tutor_to_ready_families = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE, FamilyStatus.READY_TO_START)
+    tutor_to_ready_families, _ = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE, FamilyStatus.READY_TO_START)
     print(f'ready to start families list: {tutor_to_ready_families}')
 
     # todo: add column index instead of hard coded '3' and '4'
@@ -44,7 +44,7 @@ def create_teams_list_sheet(browser, unit_name, wb):
     apply_borders_to_all_teams(wb, TEAMS_LIST_SHEET_NAME, HEADER_NAME, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM,
                                {**active_team_list, **vacation_team_list})
     # return tutor_to_families since it's required in create_families_sheet() called from main
-    return tutor_to_families
+    return team_leader_to_families
 
 
 def retrieve_team_list(browser, unit_name, url_page, with_search_button=False, families_status=FamilyStatus.ACTIVE):
@@ -142,15 +142,19 @@ def collect_tutor_families(browser, unit_name, url_page, family_status):
     active_families_list = defaultdict(lambda: [])
     rows = browser.find_elements(By.XPATH, './/tr[starts-with(@id, "family_")]')
 
+    team_leader_to_families = defaultdict(lambda: [])
     for row in rows:
         cells = row.find_elements(By.TAG_NAME, "td")
         assigned_to = cells[TUTOR_COLUMN_IN_TEAMS_SHEET].text
         family_name = cells[0].text
         family_link = cells[0].find_element(By.TAG_NAME, "a").get_attribute("href")
+        team_leader = re.split('מרכז שרון - |מרכז שרון – ', cells[1].text)
+        if len(team_leader) > 1:
+            team_leader_to_families[team_leader[1]].append(family_name)
         families = active_families_list[assigned_to]
         active_families_list[assigned_to] = families + [(family_name, family_link)]
 
-    return active_families_list
+    return active_families_list, team_leader_to_families
 
 
 def update_wb_families_status(wb, sheet_name, header_name, start_row, family_count_column_shift, family_list_column_shift, tutor_to_families):

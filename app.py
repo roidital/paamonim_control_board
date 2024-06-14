@@ -27,12 +27,14 @@ def do_login():
     username = request.form.get('username')
     password = request.form.get('password')
     unit_name = request.form.get('unit_name')
+    do_teams_list_sheet = 'create_teams_list_sheet' in request.form
+    do_families_sheet = 'create_families_sheet' in request.form
     browser, unit_name = _do_login(username, password, unit_name)
     if not browser:
         flash("שגיאת התחברות, אנא בדוק/י שהיוזר והסיסמא נכונים")
         return redirect(url_for('do_login'))
 
-    main(browser, unit_name, username, password)
+    main(browser, unit_name, username, password, do_teams_list_sheet, do_families_sheet)
     return redirect(url_for('download_excel'))
 
 
