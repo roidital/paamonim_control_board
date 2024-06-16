@@ -1,30 +1,25 @@
 import re
-import openpyxl
 import datetime
-from src.common.common_utils import filter_unit_name_with_search_button, set_cell_value, __apply_border_to_team_table, \
-    __adjust_column_width_to_text
-from src.common.constants import URL_FAMILIES_STATUS_PAGE, LIGHT_BLUE_FILL, FAMILIES_SHEET_NAME, YELLOW_FILL, \
-    FAMILIES_SHEET_FIRST_COLUMN_INDEX, FAMILIES_SHEET_LAST_COLUMN_INDEX, DAYS_WITHOUT_BUDGET_LIMIT, MAIN_LOGIN_URL, \
+from src.common.common_utils import filter_unit_name_with_search_button, set_cell_value, __apply_border_to_team_table
+from src.common.constants import URL_FAMILIES_STATUS_PAGE, YELLOW_FILL, \
+    FAMILIES_SHEET_FIRST_COLUMN_INDEX, FAMILIES_SHEET_LAST_COLUMN_INDEX, DAYS_WITHOUT_BUDGET_LIMIT, \
     BUDGET_AND_BALANCES_PAGE, FAMILY_NAME, UNIT_NAME, CITY, LAST_MEETING_DATE, NEXT_MEETING_DATE, LAST_SHIKUF_BITSUA, \
     LAST_OSH_STATS, TOTAL_DEBTS, MONTHLY_DEBTS_PAYMENT, UNSETTLED_DEBTS, BUDGET, CASE_AGE, NUM_OF_MEETINGS, \
     NUM_CANCELLED_MEETINGS, BUDGET_INCOME, BUDGET_EXPENSE, BUDGET_DIFF, MONTH_INCOME, MONTH_EXPENSE, LAST_MONTH_DIFF, \
     TUTOR, DAYS_WITHOUT_FIRST_MEETING_LIMIT
-from selenium.webdriver.common.by import By
 from collections import defaultdict
 import asyncio
-from pyppeteer import launch
 import nest_asyncio
 nest_asyncio.apply()
 
 
-def create_families_sheet(wb, sheet_name, browser, start_row, team_leader_to_families, unit_name, username, password):
+async def create_families_sheet(sheet, browser, start_row, team_leader_to_families, unit_name, username, password):
     # to reset the checkboxes checked by previous steps
-    browser.get(URL_FAMILIES_STATUS_PAGE)
-    filter_unit_name_with_search_button(browser, unit_name)
+    page = await browser.newPage()
+    await page.goto(URL_FAMILIES_STATUS_PAGE)
+    await filter_unit_name_with_search_button(page, unit_name)
 
-    sheet = wb[sheet_name]
-
-    rows = browser.find_elements(By.XPATH, './/tr[starts-with(@id, "family_")]')
+    rows = await page.querySelectorAll('tr[id^="family_"]')
 
     i = start_row
     family_data_dict = defaultdict(lambda: [])
@@ -33,11 +28,14 @@ def create_families_sheet(wb, sheet_name, browser, start_row, team_leader_to_fam
         for family in families:
             # find the row in the html that contains the family name
             for row in rows:
-                cells = row.find_elements(By.TAG_NAME, "td")
-                if family in cells[0].text:
+                cells = await row.querySelectorAll('td')
+                cell0_value = await page.evaluate('(element) => element.textContent', cells[0])
+                if family in cell0_value:
                     # get the the family's id number (from html)
-                    family_id = row.get_attribute('id').split('_')[1]  # Get the id attribute
-                    retrieve_data_from_common_families_table(row, family_id, family_data_dict)
+                    # family_id = row.get_attribute('id').split('_')[1]  # Get the id attribute
+                    family_id = await (await row.getProperty('id')).jsonValue()
+                    family_id = family_id.split('_')[1]
+                    await retrieve_data_from_common_families_table(page, row, family_id, family_data_dict)
                     family_data_dict[family_id]['line_num'] = i
                     set_values_from_common_families_table_to_excel(family_data_dict[family_id], sheet)
 
@@ -45,43 +43,57 @@ def create_families_sheet(wb, sheet_name, browser, start_row, team_leader_to_fam
                     i += 1
                     break
     # retrieve the budget and balances data for each family (parallel execution)
-    asyncio.run(browser_dispatcher(family_data_dict, username, password))
+    asyncio.run(browser_dispatcher(family_data_dict, browser))
     # print(f'### AFTER family_data_dict: {family_data_dict}')
 
     for family_id in family_data_dict.keys():
         set_budget_and_balances_to_excel(family_data_dict[family_id], sheet)
 
     num_of_table_rows = i
-    __apply_border_to_team_table(wb[FAMILIES_SHEET_NAME], 1, num_of_table_rows - 1,
+    __apply_border_to_team_table(sheet, 1, num_of_table_rows - 1,
                                  FAMILIES_SHEET_FIRST_COLUMN_INDEX,
                                  (FAMILIES_SHEET_LAST_COLUMN_INDEX-FAMILIES_SHEET_FIRST_COLUMN_INDEX))
 
 
 # family_data_dict is an output parameter, a dictionary populated families data
-def retrieve_data_from_common_families_table(row, family_id, family_data_dict):
-    cells = row.find_elements(By.TAG_NAME, "td")
-    if cells[0].text:
+async def retrieve_data_from_common_families_table(page, row, family_id, family_data_dict):
+    cells = await row.querySelectorAll('td')
+    cell0_value = await page.evaluate('(element) => element.textContent', cells[0])
+    cell1_value = await page.evaluate('(element) => element.textContent', cells[1])
+    cell2_value = await page.evaluate('(element) => element.textContent', cells[2])
+    cell3_value = await page.evaluate('(element) => element.textContent', cells[3])
+    cell6_value = await page.evaluate('(element) => element.textContent', cells[6])
+    cell7_value = await page.evaluate('(element) => element.textContent', cells[7])
+    cell8_value = await page.evaluate('(element) => element.textContent', cells[8])
+    cell9_value = await page.evaluate('(element) => element.textContent', cells[9])
+    cell10_value = await page.evaluate('(element) => element.textContent', cells[10])
+    cell11_value = await page.evaluate('(element) => element.textContent', cells[11])
+    cell12_value = await page.evaluate('(element) => element.textContent', cells[12])
+    cell13_value = await page.evaluate('(element) => element.textContent', cells[13])
+    cell14_value = await page.evaluate('(element) => element.textContent', cells[14])
+    cell15_value = await page.evaluate('(element) => element.textContent', cells[15])
+    if cell0_value:
         # todo: consider moving the keys in the inner dict to constants in constants.py
-        family_data_dict[family_id] = {FAMILY_NAME: cells[0].text,
-                                       UNIT_NAME: cells[1].text,
-                                       CITY: cells[2].text,
-                                       TUTOR: cells[3].text,
-                                       LAST_MEETING_DATE: cells[12].text,
-                                       NEXT_MEETING_DATE: cells[13].text,
-                                       LAST_SHIKUF_BITSUA: cells[7].text,
-                                       LAST_OSH_STATS: cells[15].text,
-                                       TOTAL_DEBTS: cells[9].text,
-                                       MONTHLY_DEBTS_PAYMENT: cells[11].text,
-                                       UNSETTLED_DEBTS: cells[10].text,
-                                       BUDGET: cells[8].text,
-                                       CASE_AGE: cells[6].text}
+        family_data_dict[family_id] = {FAMILY_NAME: cell0_value,
+                                       UNIT_NAME: cell1_value,
+                                       CITY: cell2_value,
+                                       TUTOR: cell3_value,
+                                       LAST_MEETING_DATE: cell12_value,
+                                       NEXT_MEETING_DATE: cell13_value,
+                                       LAST_SHIKUF_BITSUA: cell7_value,
+                                       LAST_OSH_STATS: cell15_value,
+                                       TOTAL_DEBTS: cell9_value,
+                                       MONTHLY_DEBTS_PAYMENT: cell11_value,
+                                       UNSETTLED_DEBTS: cell10_value,
+                                       BUDGET: cell8_value,
+                                       CASE_AGE: cell6_value}
         # parse the number of meetings and the number of cancelled meetings from the format "num_meetings (num_cancelled_meetings)"
-        match = re.match(r"(\d+) \((\d+)\)", cells[14].text)
+        match = re.match(r"(\d+) \((\d+)\)", cell14_value)
         if match:
             family_data_dict[family_id][NUM_OF_MEETINGS] = match.group(1)
             family_data_dict[family_id][NUM_CANCELLED_MEETINGS] = match.group(2)
         else:
-            family_data_dict[family_id][NUM_OF_MEETINGS] = cells[14].text
+            family_data_dict[family_id][NUM_OF_MEETINGS] = cell14_value
 
 
 def set_values_from_common_families_table_to_excel(family_data, sheet):
@@ -137,39 +149,7 @@ def set_budget_and_balances_to_excel(family_data, sheet):
                        family_data[LAST_MONTH_DIFF], adjust_width=True)
 
 
-async def auto_login(username, password):
-    options = {
-        'ignoreHTTPSErrors': True,
-        'args': ['--no-sandbox'],
-        # since we are using Flask to launch this webapp - this flow is not running in main thread, in python signals
-        # can be set only in main thread, so we need to disable the signals handling
-        'handleSIGINT': False,
-        'handleSIGTERM': False,
-        'handleSIGHUP': False
-    }
-    browser = await launch(options=options)
-    page = await browser.newPage()
-
-    # navigate to the login page
-    await page.goto(MAIN_LOGIN_URL)
-
-    # Perform login, since these are the same username and password used for the initial login, we are not supposed
-    # to reach here unless the login was successful, however it's better to check for a failed login and handle it (although not expected)
-    # todo: add a check for a failed login
-    await page.type('input[name=login]', username)
-    await page.type('input[name=password]', password)
-    await page.click('#loginBtn')
-
-    # Wait for navigation to complete
-    await page.waitForNavigation()
-
-    return browser
-
-
-async def browser_dispatcher(family_data_dict, username, password):
-    # Perform login
-    browser = await auto_login(username, password)
-
+async def browser_dispatcher(family_data_dict, browser):
     # in case the family doesn't have a shikuf/bitsua - it means the BUDGET_AND_BALANCES_PAGE page doesn't exist
     # which will follow a timeout exception in the fetch_family_data function
     tasks = [fetch_family_data(browser, family_id, family_data_dict) for family_id in family_data_dict.keys()

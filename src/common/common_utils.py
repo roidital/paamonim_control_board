@@ -1,12 +1,9 @@
 from openpyxl.styles import Alignment
 import unicodedata
 import openpyxl
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException
 from src.common.constants import LEFT_TOP_BORDER, RIGHT_TOP_BORDER, TOP_BORDER, BOTTOM_BORDER, LEFT_BOTTOM_BORDER, \
-    RIGHT_BOTTOM_BORDER, LEFT_BORDER, RIGHT_BORDER, BOLD_FONT, FamilyStatus, HEADERS_ROW_NUM, LIGHT_BLUE_FILL
+    RIGHT_BOTTOM_BORDER, LEFT_BORDER, RIGHT_BORDER, BOLD_FONT, FamilyStatus, LIGHT_BLUE_FILL
+import asyncio
 
 
 # app = QApplication([])  # QApplication instance is required for QMessageBox
@@ -32,73 +29,64 @@ def set_cell_value(cell, value, fill=None, font=BOLD_FONT, adjust_width=False, w
         __adjust_column_width_to_text(cell)
 
 
-def filter_unit_name_no_search_button(browser, filter_by, unit_name):
+async def filter_unit_name_no_search_button(page, unit_name):
     # wait for the dropdown to be clickable
-    dropdown = WebDriverWait(browser, 5).until(EC.element_to_be_clickable((By.CLASS_NAME, 'betterselecter-sel')))
-    dropdown.click()
+    dropdown = await page.waitForSelector('.betterselecter-sel', {'visible': True})
+    await dropdown.click()
 
     # wait for the options to be visible
-    WebDriverWait(browser, 5).until(EC.visibility_of_all_elements_located((By.XPATH, '//div[@class="betterselecter-op"]')))
+    await page.waitForSelector('.betterselecter-op', {'visible': True})
 
     # count the rows before filtering the table
-    current_row_count = len(browser.find_elements(By.XPATH, f'.//tr[starts-with(@id, {filter_by})]'))
-    # print(f'### current_row_count: {current_row_count}')
-
+    #current_row_count = len(await page.querySelectorAll(f'tr[id^={filter_by}]'))
     try:
-        option = WebDriverWait(browser, 5).until(EC.visibility_of_element_located((By.XPATH, f'//div[@class="betterselecter-op" and contains(text(), "{unit_name}")]')))
+        option = await page.waitForXPath(f'//div[@class="betterselecter-op" and contains(text(), "{unit_name}")]',
+                                         {'visible': True})
         print("### Found the option")
-        option.click()
-    except TimeoutException:
-        print(f'### unit name: {unit_name} not found')
-        # QMessageBox.information(None, "שגיאה", "לא נמצאה יחידה עם שם זה")
+        await option.click()
+    except:
+        print(f'### ERROR: unit name: {unit_name} not found')
         exit(0)
 
-    def __rows_have_updated(browser):
-        new_row_count = len(browser.find_elements(By.XPATH, f'.//tr[starts-with(@id, {filter_by})]'))
-        # print(f'### new_row_count: {new_row_count}')
-        return new_row_count != current_row_count
-
-    # wait for the table to be updated after unit filter
-    try:
-        WebDriverWait(browser, 5).until(__rows_have_updated)
-    except TimeoutException:
-        print("got timeout while waiting for rows number to change")
+    # while True:
+    #     new_row_count = len(await page.querySelectorAll(f'tr[id^={filter_by}]'))
+    #     if new_row_count != current_row_count:
+    #         break
+    #     await asyncio.sleep(0.1)  # wait a bit before checking again
+    await asyncio.sleep(2)
 
 
-def filter_unit_name_with_search_button(browser, unit_name, families_status = FamilyStatus.ACTIVE):
+async def filter_unit_name_with_search_button(page, unit_name, families_status = FamilyStatus.ACTIVE):
     # wait for the dropdown to be clickable
-    dropdown = WebDriverWait(browser, 5).until(EC.element_to_be_clickable((By.CLASS_NAME, 'betterselecter-sel')))
-    dropdown.click()
+    dropdown = await page.waitForSelector('.betterselecter-sel', {'visible': True})
+    await dropdown.click()
 
     # wait for the options to be visible
-    options = WebDriverWait(browser, 5).until(
-        EC.visibility_of_all_elements_located((By.XPATH, '//div[@class="betterselecter-op"]')))
+    await page.waitForSelector('.betterselecter-op', {'visible': True})
 
     # find the relevant unit we wish to analyze
-    found_option = False
-    for option in options:
-        if unit_name in option.text:
-            print(f"### Found the option {unit_name}")
-            option.click()
-            found_option = True
-            break
-
-    if not found_option:
-        # QMessageBox.information(None, "שגיאה", "לא נמצאה יחידה עם שם זה")
-        print(f'### ERROR - unit name: {unit_name} not found')
+    try:
+        option = await page.waitForXPath(f'//div[@class="betterselecter-op" and contains(text(), "{unit_name}")]',
+                                         {'visible': True})
+        print("### Found the option")
+        await option.click()
+    except:
+        print(f'### ERROR: unit name: {unit_name} not found')
         exit(0)
 
     if families_status == FamilyStatus.READY_TO_START:
-        browser.find_element(By.ID, 'started').click()
-        browser.find_element(By.ID, 'ordered').click()
+        started_filter = await page.querySelector('#started')
+        await started_filter.click()
+        ordered_filter = await page.querySelector('#ordered')
+        await ordered_filter.click()
 
-    browser.find_element(By.ID, 'searchButton').click()
+    search_button = await page.querySelector('#searchButton')
+    await search_button.click()
 
     # find the table
-    tables = WebDriverWait(browser, 5).until(EC.presence_of_all_elements_located((By.CLASS_NAME, 'tbl_chart')))
+    table = await page.waitForSelector('.tbl_chart:nth-of-type(2)')
 
-    # select the second table
-    table = tables[1]
+    # return the second table
     return table
 
 

@@ -31,7 +31,7 @@ def save_workbook(wb):
     session['temp_file'] = temp_file.name
 
 
-def main(browser, unit_name, username, password, do_teams_list_sheet, do_families_sheet):
+async def main(browser, unit_name, username, password, do_teams_list_sheet, do_families_sheet):
     # app = QApplication([])
     # browser, unit_name = _do_login()
     if not browser:
@@ -41,14 +41,15 @@ def main(browser, unit_name, username, password, do_teams_list_sheet, do_familie
     wb = init_workbook(EXCEL_FILENAME)
 
     if do_teams_list_sheet:
-        team_leader_to_families = create_teams_list_sheet(browser, unit_name, wb)
+        team_leader_to_families = await create_teams_list_sheet(browser, unit_name, wb)
 
     if do_families_sheet:
         if not do_teams_list_sheet:
-            _, team_leader_to_families = collect_tutor_families(browser, unit_name,
+            _, team_leader_to_families = await collect_tutor_families(browser, unit_name,
                                                                                 URL_FAMILIES_STATUS_PAGE,
                                                                                 FamilyStatus.ACTIVE)
-        create_families_sheet(wb, FAMILIES_SHEET_NAME, browser, FAMILIES_SHEET_FIRST_ROW_NUM, team_leader_to_families, unit_name, username, password)
+        sheet = wb[FAMILIES_SHEET_NAME]
+        await create_families_sheet(sheet, browser, FAMILIES_SHEET_FIRST_ROW_NUM, team_leader_to_families, unit_name, username, password)
 
     save_workbook(wb)
     print(f'### DONE')

@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, session, send_file, abort, redirect, url_for, flash
+
+from login.login import auto_login
 from src.main import main
-from login.login import _do_login
 import os
 
 app_dir = os.path.dirname(os.path.abspath(__file__))
@@ -22,19 +23,19 @@ def login_form():
 
 
 @app.route('/login', methods=['POST'])
-def do_login():
+async def do_login():
     # Get form data
     username = request.form.get('username')
     password = request.form.get('password')
     unit_name = request.form.get('unit_name')
     do_teams_list_sheet = 'create_teams_list_sheet' in request.form
     do_families_sheet = 'create_families_sheet' in request.form
-    browser, unit_name = _do_login(username, password, unit_name)
+    browser = await auto_login(username, password)
     if not browser:
         flash("שגיאת התחברות, אנא בדוק/י שהיוזר והסיסמא נכונים")
         return redirect(url_for('do_login'))
 
-    main(browser, unit_name, username, password, do_teams_list_sheet, do_families_sheet)
+    await main(browser, unit_name, username, password, do_teams_list_sheet, do_families_sheet)
     return redirect(url_for('download_excel'))
 
 

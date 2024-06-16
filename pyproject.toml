@@ -7,11 +7,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-selenium = "^4.20.0"
 openpyxl = "^3.1.2"
-flask = "^3.0.3"
-pyvirtualdisplay = "^3.0"
-easyprocess = "^1.1"
+flask = {extras = ["async"], version = "^3.0.3"}
 pyppeteer = "^2.0.0"
 nest-asyncio = "^1.6.0"
 

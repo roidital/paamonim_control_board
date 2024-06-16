@@ -8,25 +8,24 @@ from src.common.constants import URL_ACTIVE_TEAM_MEMBERS, TEAMS_LIST_SHEET_NAME,
     TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX, ACTIVE_FAMILY_COUNT_COLUMN_SHIFT, ACTIVE_FAMILY_LIST_COLUMN_SHIFT, \
     READY_FAMILY_COUNT_COLUMN_SHIFT, READY_FAMILY_LIST_COLUMN_SHIFT
 from collections import defaultdict
-from selenium.webdriver.common.by import By
 from openpyxl.styles import Font, Alignment, Color
 
 
-def create_teams_list_sheet(browser, unit_name, wb):
-    active_team_list = retrieve_team_list(browser, unit_name, URL_ACTIVE_TEAM_MEMBERS)
+async def create_teams_list_sheet(browser, unit_name, wb):
+    active_team_list = await retrieve_team_list(browser, unit_name, URL_ACTIVE_TEAM_MEMBERS)
     print(f'active team list: {active_team_list}')
 
     sheet = wb[TEAMS_LIST_SHEET_NAME]
     # add active team members to the excel file
     update_wb_active_team_members(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, active_team_list)
 
-    vacation_team_list = retrieve_team_list(browser, unit_name, ULR_VACATION_TEAM_MEMBERS)
+    vacation_team_list = await retrieve_team_list(browser, unit_name, ULR_VACATION_TEAM_MEMBERS)
     print(f'vacation team list: {vacation_team_list}')
 
     # add vacation team members to the excel file
     update_wb_vacation_team_members(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, vacation_team_list)
 
-    tutor_to_families, team_leader_to_families = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
+    tutor_to_families, team_leader_to_families = await collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
                                                                         FamilyStatus.ACTIVE)
     # print(f'team_leader_to_families: {team_leader_to_families}')
 
@@ -34,7 +33,7 @@ def create_teams_list_sheet(browser, unit_name, wb):
     update_wb_families_status(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, ACTIVE_FAMILY_COUNT_COLUMN_SHIFT,
                               ACTIVE_FAMILY_LIST_COLUMN_SHIFT, tutor_to_families)
 
-    tutor_to_ready_families, _ = collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
+    tutor_to_ready_families, _ = await collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
                                                         FamilyStatus.READY_TO_START)
     print(f'ready to start families list: {tutor_to_ready_families}')
 
@@ -49,24 +48,29 @@ def create_teams_list_sheet(browser, unit_name, wb):
     return team_leader_to_families
 
 
-def retrieve_team_list(browser, unit_name, url_page, with_search_button=False, families_status=FamilyStatus.ACTIVE):
-    browser.get(url_page)
+async def retrieve_team_list(browser, unit_name, url_page, with_search_button=False, families_status=FamilyStatus.ACTIVE):
+    page = await browser.newPage()
+    await page.goto(url_page)
 
+    # roi: I'm here - use page instead of browser to find elements
     if with_search_button:
-        filter_unit_name_with_search_button(browser, unit_name, families_status)
+        await filter_unit_name_with_search_button(browser, unit_name, families_status)
     else:
-        filter_unit_name_no_search_button(browser, "user_", unit_name)
+        await filter_unit_name_no_search_button(page, unit_name)
+        print('### filter_unit_name_no_search_button DONE')
 
     team_list = defaultdict(set)
-    rows = browser.find_elements(By.XPATH, './/tr[starts-with(@id, "user_")]')
+    rows = await page.querySelectorAll('tr[id^="user_"]')
 
     current_user = ""
     for row in rows:
-        cells = row.find_elements(By.TAG_NAME, "td")
-        current_user = cells[1].text if cells[1].text else current_user
-        split_text = re.split('מרכז שרון - |מרכז שרון – ', cells[2].text)
+        cells = await row.querySelectorAll('td')
+        cell1_value = await page.evaluate('(element) => element.textContent', cells[1])
+        cell2_value = await page.evaluate('(element) => element.textContent', cells[2])
+        current_user = cell1_value if cell1_value else current_user
+        split_text = re.split('מרכז שרון - |מרכז שרון – ', cell2_value)
         if len(split_text) > 1:
-            team_list[split_text[1]].add(cells[1].text if cells[1].text else current_user)
+            team_list[split_text[1]].add(cell1_value if cell1_value else current_user)
 
     # in case it's vacation team members page, team leader is not necessarily in the list (usually not)
     if url_page == ULR_VACATION_TEAM_MEMBERS:
@@ -91,8 +95,7 @@ def apply_borders_to_all_teams(sheet, start_row, team_list):
 
 
 def update_wb_active_team_members(sheet, start_row, team_list):
-    # Find the column index of the header
-    column_index = TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX #__find_header_index(sheet, header_name)
+    column_index = TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX
 
     # Add new cells to the column
     i = start_row
@@ -111,8 +114,7 @@ def update_wb_active_team_members(sheet, start_row, team_list):
 
 
 def update_wb_vacation_team_members(sheet, start_row, team_list):
-    # Find the column index of the header
-    column_index = TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX #__find_header_index(sheet, header_name)
+    column_index = TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX
 
     # Iterate over each team leader in the team_list
     for team_leader, team_members in team_list.items():
@@ -126,21 +128,24 @@ def update_wb_vacation_team_members(sheet, start_row, team_list):
             set_cell_value(sheet.cell(row=last_team_member_row + i, column=column_index + 2), CHECK_MARK)
 
 
-def collect_tutor_families(browser, unit_name, url_page, family_status):
-    browser.get(url_page)
+async def collect_tutor_families(browser, unit_name, url_page, family_status):
+    page = await browser.newPage()
+    await page.goto(url_page)
 
-    filter_unit_name_with_search_button(browser, unit_name, family_status)
+    await filter_unit_name_with_search_button(page, unit_name, family_status)
 
     active_families_list = defaultdict(lambda: [])
-    rows = browser.find_elements(By.XPATH, './/tr[starts-with(@id, "family_")]')
+    rows = await page.querySelectorAll('tr[id^="family_"]')
 
     team_leader_to_families = defaultdict(lambda: [])
     for row in rows:
-        cells = row.find_elements(By.TAG_NAME, "td")
-        assigned_to = cells[TUTOR_COLUMN_IN_TEAMS_SHEET].text
-        family_name = cells[0].text
-        family_link = cells[0].find_element(By.TAG_NAME, "a").get_attribute("href")
-        team_leader = re.split('מרכז שרון - |מרכז שרון – ', cells[1].text)
+        cells = await row.querySelectorAll('td')
+        assigned_to = await page.evaluate('(element) => element.textContent', cells[TUTOR_COLUMN_IN_TEAMS_SHEET])
+        family_name = await page.evaluate('(element) => element.textContent', cells[0])
+        a_element = await cells[0].querySelector('a')
+        family_link = await page.evaluate('(element) => element.href', a_element)
+        unit_full_name = await page.evaluate('(element) => element.textContent', cells[1])
+        team_leader = re.split('מרכז שרון - |מרכז שרון – ', unit_full_name)
         if len(team_leader) > 1:
             team_leader_to_families[team_leader[1]].append(family_name)
         families = active_families_list[assigned_to]
