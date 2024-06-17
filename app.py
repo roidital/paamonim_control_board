@@ -1,3 +1,5 @@
+import asyncio
+
 from flask import Flask, render_template, request, session, send_file, abort, redirect, url_for, flash
 
 from login.login import auto_login
@@ -23,7 +25,12 @@ def login_form():
 
 
 @app.route('/login', methods=['POST'])
-async def do_login():
+def do_login():
+    asyncio.run(async_main())
+    return redirect(url_for('download_excel'))
+
+
+async def async_main():
     # Get form data
     username = request.form.get('username')
     password = request.form.get('password')
@@ -35,8 +42,8 @@ async def do_login():
         flash("שגיאת התחברות, אנא בדוק/י שהיוזר והסיסמא נכונים")
         return redirect(url_for('do_login'))
 
-    await main(browser, unit_name, username, password, do_teams_list_sheet, do_families_sheet)
-    return redirect(url_for('download_excel'))
+    await main(browser, unit_name, do_teams_list_sheet, do_families_sheet)
+    browser.close()
 
 
 @app.route('/download', methods=['GET'])

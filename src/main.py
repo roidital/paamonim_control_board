@@ -31,7 +31,7 @@ def save_workbook(wb):
     session['temp_file'] = temp_file.name
 
 
-async def main(browser, unit_name, username, password, do_teams_list_sheet, do_families_sheet):
+async def main(browser, unit_name, do_teams_list_sheet, do_families_sheet):
     # app = QApplication([])
     # browser, unit_name = _do_login()
     if not browser:
@@ -49,7 +49,7 @@ async def main(browser, unit_name, username, password, do_teams_list_sheet, do_f
                                                                                 URL_FAMILIES_STATUS_PAGE,
                                                                                 FamilyStatus.ACTIVE)
         sheet = wb[FAMILIES_SHEET_NAME]
-        await create_families_sheet(sheet, browser, FAMILIES_SHEET_FIRST_ROW_NUM, team_leader_to_families, unit_name, username, password)
+        await create_families_sheet(sheet, browser, FAMILIES_SHEET_FIRST_ROW_NUM, team_leader_to_families, unit_name)
 
     save_workbook(wb)
     print(f'### DONE')

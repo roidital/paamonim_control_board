@@ -13,7 +13,7 @@ import nest_asyncio
 nest_asyncio.apply()
 
 
-async def create_families_sheet(sheet, browser, start_row, team_leader_to_families, unit_name, username, password):
+async def create_families_sheet(sheet, browser, start_row, team_leader_to_families, unit_name):
     # to reset the checkboxes checked by previous steps
     page = await browser.newPage()
     await page.goto(URL_FAMILIES_STATUS_PAGE)
@@ -32,7 +32,6 @@ async def create_families_sheet(sheet, browser, start_row, team_leader_to_famili
                 cell0_value = await page.evaluate('(element) => element.textContent', cells[0])
                 if family in cell0_value:
                     # get the the family's id number (from html)
-                    # family_id = row.get_attribute('id').split('_')[1]  # Get the id attribute
                     family_id = await (await row.getProperty('id')).jsonValue()
                     family_id = family_id.split('_')[1]
                     await retrieve_data_from_common_families_table(page, row, family_id, family_data_dict)
@@ -43,7 +42,7 @@ async def create_families_sheet(sheet, browser, start_row, team_leader_to_famili
                     i += 1
                     break
     # retrieve the budget and balances data for each family (parallel execution)
-    asyncio.run(browser_dispatcher(family_data_dict, browser))
+    await browser_dispatcher(family_data_dict, browser)
     # print(f'### AFTER family_data_dict: {family_data_dict}')
 
     for family_id in family_data_dict.keys():
