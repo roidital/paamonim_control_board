@@ -69,14 +69,15 @@ LOGIN_URL: Final[str] = 'https://app.paamonim.org.il'
 async def auto_login(username, password):
     options = {
         'ignoreHTTPSErrors': True,
-        'args': ['--no-sandbox --headless --disable-gpu'],
+        'args': ['--no-sandbox'],
         # since we are using Flask to launch this webapp - this flow is not running in main thread, in python signals
         # can be set only in main thread, so we need to disable the signals handling
         'handleSIGINT': False,
         'handleSIGTERM': False,
         'handleSIGHUP': False
     }
-    browser = await launch(options=options)
+    # browser = await launch(options=options)
+    browser= await launch(options={'args': ['--no-sandbox']})
     page = await browser.newPage()
 
     # navigate to the login page
