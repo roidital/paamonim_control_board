@@ -173,7 +173,12 @@ async def browser_dispatcher(family_data_dict, browser):
 
 async def fetch_family_osh_data(browser, family_id, family_data_dict):
     page = await browser.newPage()
-    await page.goto(OSH_STATS_PAGE + family_id)
+    try:
+        await page.goto(OSH_STATS_PAGE + family_id, timeout=5000)
+    except:
+        print(f'### ERROR: family {family_id} got timedout while browsing to OSH page')
+        return 'timeout for OSH page. family_id: ' + family_id
+    
     rows = await page.querySelectorAll('tbody tr')
     if len(rows)> 0:
         tds = await rows[0].querySelectorAll('td')
