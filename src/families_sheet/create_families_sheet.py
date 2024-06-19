@@ -174,7 +174,7 @@ async def browser_dispatcher(family_data_dict, browser):
 async def fetch_family_osh_data(browser, family_id, family_data_dict):
     page = await browser.newPage()
     try:
-        await page.goto(OSH_STATS_PAGE + family_id, timeout=5000)
+        await page.goto(OSH_STATS_PAGE + family_id, timeout=10000)
     except:
         print(f'### ERROR: family {family_id} got timedout while browsing to OSH page')
         return 'timeout for OSH page. family_id: ' + family_id
