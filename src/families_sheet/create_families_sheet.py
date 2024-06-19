@@ -165,8 +165,8 @@ async def browser_dispatcher(family_data_dict, browser):
     tasks.extend(osh_tasks)
     pages_content = await asyncio.gather(*tasks)
 
-    # for page_content in pages_content:
-    #     print(f'### page_content: {page_content}')
+    for page_content in pages_content:
+        print(f'### page_content: {page_content}')
 
     await browser.close()
 
@@ -178,7 +178,7 @@ async def fetch_family_osh_data(browser, family_id, family_data_dict):
     except:
         print(f'### ERROR: family {family_id} got timedout while browsing to OSH page')
         return 'timeout for OSH page. family_id: ' + family_id
-    
+
     rows = await page.querySelectorAll('tbody tr')
     if len(rows)> 0:
         tds = await rows[0].querySelectorAll('td')
@@ -198,7 +198,11 @@ async def fetch_family_osh_data(browser, family_id, family_data_dict):
 
 async def fetch_family_data(browser, family_id, family_data_dict):
     page = await browser.newPage()
-    await page.goto(BUDGET_AND_BALANCES_PAGE + family_id)
+    try:
+        await page.goto(BUDGET_AND_BALANCES_PAGE + family_id, timeout=10000)
+    except:
+        print(f'### ERROR: family {family_id} got timedout while browsing to OSH budget and balance page')
+        return 'timeout for OSH page. family_id: ' + family_id
 
     try:
         await page.waitForSelector('#expenseTable')
