@@ -43,7 +43,7 @@ async def async_main():
         return redirect(url_for('do_login'))
 
     await main(browser, unit_name, do_teams_list_sheet, do_families_sheet)
-    browser.close()
+    await browser.close()
 
 
 @app.route('/download', methods=['GET'])

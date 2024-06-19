@@ -6,6 +6,7 @@ from enum import Enum
 # URLs
 MAIN_LOGIN_URL: Final[str] = 'https://app.paamonim.org.il'
 BUDGET_AND_BALANCES_PAGE: Final[str] = 'https://app.paamonim.org.il/budgets/budget_and_balances/'
+OSH_STATS_PAGE: Final[str] = 'https://app.paamonim.org.il/budgets/wallet_data/'
 URL_ACTIVE_TEAM_MEMBERS: Final[str] = 'https://app.paamonim.org.il/contacts/paam_index'
 ULR_VACATION_TEAM_MEMBERS: Final[str] = 'https://app.paamonim.org.il/contacts/paam_index?in_vacation=1'
 URL_FAMILIES_STATUS_PAGE: Final[str] = 'https://app.paamonim.org.il/budgets'
@@ -21,7 +22,7 @@ FAMILIES_SHEET_FIRST_ROW_NUM: Final[int] = 4
 HEADERS_ROW_NUM: Final[int] = 5
 TUTOR_COLUMN_IN_TEAMS_SHEET: Final[int] = 3
 FAMILIES_SHEET_FIRST_COLUMN_INDEX: Final[int] = 2
-FAMILIES_SHEET_LAST_COLUMN_INDEX: Final[int] = 22
+FAMILIES_SHEET_LAST_COLUMN_INDEX: Final[int] = 24
 DAYS_WITHOUT_BUDGET_LIMIT: Final[int] = 45
 DAYS_WITHOUT_FIRST_MEETING_LIMIT: Final[int] = 30
 READY_FAMILIES_SUM_COLUMN_DIFF: Final[int] = 3
@@ -54,6 +55,8 @@ BUDGET_DIFF: Final[str] = "budget_diff"
 MONTH_INCOME: Final[str] = "month_income"
 MONTH_EXPENSE: Final[str] = "month_expense"
 LAST_MONTH_DIFF: Final[str] = "last_month_diff"
+CURRENT_MONTH_OSH: Final[str] = "current_month_osh"
+LAST_MONTH_OSH: Final[str] = "last_month_osh"
 
 
 # borders

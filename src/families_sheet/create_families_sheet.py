@@ -6,7 +6,7 @@ from src.common.constants import URL_FAMILIES_STATUS_PAGE, YELLOW_FILL, \
     BUDGET_AND_BALANCES_PAGE, FAMILY_NAME, UNIT_NAME, CITY, LAST_MEETING_DATE, NEXT_MEETING_DATE, LAST_SHIKUF_BITSUA, \
     LAST_OSH_STATS, TOTAL_DEBTS, MONTHLY_DEBTS_PAYMENT, UNSETTLED_DEBTS, BUDGET, CASE_AGE, NUM_OF_MEETINGS, \
     NUM_CANCELLED_MEETINGS, BUDGET_INCOME, BUDGET_EXPENSE, BUDGET_DIFF, MONTH_INCOME, MONTH_EXPENSE, LAST_MONTH_DIFF, \
-    TUTOR, DAYS_WITHOUT_FIRST_MEETING_LIMIT
+    TUTOR, DAYS_WITHOUT_FIRST_MEETING_LIMIT, OSH_STATS_PAGE, CURRENT_MONTH_OSH, LAST_MONTH_OSH
 from collections import defaultdict
 import asyncio
 import nest_asyncio
@@ -146,19 +146,49 @@ def set_budget_and_balances_to_excel(family_data, sheet):
     if LAST_MONTH_DIFF in family_data:
         set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 17),
                        family_data[LAST_MONTH_DIFF], adjust_width=True)
+    if CURRENT_MONTH_OSH in family_data:
+        set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 19),
+                       family_data[CURRENT_MONTH_OSH], adjust_width=True)
+    if LAST_MONTH_OSH in family_data:
+        set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 20),
+                       family_data[LAST_MONTH_OSH], adjust_width=True)
+        set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_FIRST_COLUMN_INDEX + 21),
+                       int(family_data[CURRENT_MONTH_OSH].replace(',', ''))-int(family_data[LAST_MONTH_OSH].replace(',', '')), adjust_width=True)
 
 
 async def browser_dispatcher(family_data_dict, browser):
     # in case the family doesn't have a shikuf/bitsua - it means the BUDGET_AND_BALANCES_PAGE page doesn't exist
     # which will follow a timeout exception in the fetch_family_data function
     tasks = [fetch_family_data(browser, family_id, family_data_dict) for family_id in family_data_dict.keys()
-             if family_data_dict[family_id]['last_shikuf_bitsua'] != '']
+             if family_data_dict[family_id]['last_shikuf_bitsua'].strip() != '']
+    osh_tasks = [fetch_family_osh_data(browser, family_id, family_data_dict) for family_id in family_data_dict.keys()]
+    tasks.extend(osh_tasks)
     pages_content = await asyncio.gather(*tasks)
 
-    for page_content in pages_content:
-        print(f'### page_content: {page_content}')
+    # for page_content in pages_content:
+    #     print(f'### page_content: {page_content}')
 
     await browser.close()
+
+
+async def fetch_family_osh_data(browser, family_id, family_data_dict):
+    page = await browser.newPage()
+    await page.goto(OSH_STATS_PAGE + family_id)
+    rows = await page.querySelectorAll('tbody tr')
+    if len(rows)> 0:
+        tds = await rows[0].querySelectorAll('td')
+        current_month_osh_td = tds[2] # the osh value is in the 3rd <td> element
+        current_month_osh_value = await page.evaluate('(element) => element.textContent', current_month_osh_td)
+        #print(f'### current_month_osh_value: {current_month_osh_value}')
+        family_data_dict[family_id][CURRENT_MONTH_OSH] = current_month_osh_value
+        if len(rows) > 1:
+            tds = await rows[1].querySelectorAll('td')
+            last_month_osh_td = tds[2] # the osh value is in the 3rd <td> element
+            last_month_osh_value = await page.evaluate('(element) => element.textContent', last_month_osh_td)
+            #print(f'### last_month_osh_value: {last_month_osh_value}')
+            family_data_dict[family_id][LAST_MONTH_OSH] = last_month_osh_value
+
+    return 'done with osh for family_id: ' + family_id
 
 
 async def fetch_family_data(browser, family_id, family_data_dict):
