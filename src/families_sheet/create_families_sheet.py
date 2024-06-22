@@ -6,14 +6,13 @@ from src.common.constants import URL_FAMILIES_STATUS_PAGE, YELLOW_FILL, \
     BUDGET_AND_BALANCES_PAGE, FAMILY_NAME, UNIT_NAME, CITY, LAST_MEETING_DATE, NEXT_MEETING_DATE, LAST_SHIKUF_BITSUA, \
     LAST_OSH_STATS, TOTAL_DEBTS, MONTHLY_DEBTS_PAYMENT, UNSETTLED_DEBTS, BUDGET, CASE_AGE, NUM_OF_MEETINGS, \
     NUM_CANCELLED_MEETINGS, BUDGET_INCOME, BUDGET_EXPENSE, BUDGET_DIFF, MONTH_INCOME, MONTH_EXPENSE, LAST_MONTH_DIFF, \
-    TUTOR, DAYS_WITHOUT_FIRST_MEETING_LIMIT, OSH_STATS_PAGE, CURRENT_MONTH_OSH, LAST_MONTH_OSH
+    TUTOR, DAYS_WITHOUT_FIRST_MEETING_LIMIT, OSH_STATS_PAGE, CURRENT_MONTH_OSH, LAST_MONTH_OSH, MAIN_FAMILY_PAGE
 from collections import defaultdict
 import asyncio
-import nest_asyncio
-nest_asyncio.apply()
+import aiofiles
 
 
-async def create_families_sheet(sheet, browser, start_row, team_leader_to_families, unit_name):
+async def create_families_sheet(sheet, browser, start_row, team_leader_to_families, unit_name, do_email_list_sheet, lock):
     # to reset the checkboxes checked by previous steps
     page = await browser.newPage()
     await page.goto(URL_FAMILIES_STATUS_PAGE)
@@ -43,7 +42,7 @@ async def create_families_sheet(sheet, browser, start_row, team_leader_to_famili
                     break
     await page.close()
     # retrieve the budget and balances data for each family (parallel execution)
-    await browser_dispatcher(family_data_dict, browser)
+    await browser_dispatcher(family_data_dict, browser, do_email_list_sheet, lock)
     # print(f'### AFTER family_data_dict: {family_data_dict}')
 
     for family_id in family_data_dict.keys():
@@ -157,19 +156,49 @@ def set_budget_and_balances_to_excel(family_data, sheet):
                        int(family_data[CURRENT_MONTH_OSH].replace(',', ''))-int(family_data[LAST_MONTH_OSH].replace(',', '')), adjust_width=True)
 
 
-async def browser_dispatcher(family_data_dict, browser):
+async def browser_dispatcher(family_data_dict, browser, do_email_list_sheet, lock):
     # in case the family doesn't have a shikuf/bitsua - it means the BUDGET_AND_BALANCES_PAGE page doesn't exist
     # which will follow a timeout exception in the fetch_family_data function
     tasks = [fetch_family_data(browser, family_id, family_data_dict) for family_id in family_data_dict.keys()
              if family_data_dict[family_id]['last_shikuf_bitsua'].strip() != '']
     osh_tasks = [fetch_family_osh_data(browser, family_id, family_data_dict) for family_id in family_data_dict.keys()]
     tasks.extend(osh_tasks)
+    if do_email_list_sheet:
+        email_tasks = [create_email_list_sheet(browser, family_id, lock) for family_id in family_data_dict.keys()]
+        tasks.extend(email_tasks)
     pages_content = await asyncio.gather(*tasks)
 
     for page_content in pages_content:
         print(f'### page_content: {page_content}')
 
     await browser.close()
+
+
+async def create_email_list_sheet(browser, family_id, lock):
+    page = await browser.newPage()
+    try:
+        await page.goto(MAIN_FAMILY_PAGE + family_id)
+    except:
+        print(f'### ERROR: family {family_id} got timeout while browsing to family page')
+        return 'ERROR: timeout for family page. family_id: ' + family_id
+    email = await page.evaluate('''() => {
+        const dd = document.querySelector('dd div');
+        return dd ? dd.innerHTML : null;
+    }''')
+    #print(f'### email: {email}')
+
+    # if family_id is not already in the email list
+    async with aiofiles.open('families.txt', 'r') as families_file:
+        families = await families_file.read()
+    if family_id not in families:
+        # Use the lock to ensure only one coroutine is writing to the files at a time
+        async with lock:
+            async with aiofiles.open('families.txt', 'a') as families_file:
+                await families_file.write(family_id + '\n')
+            async with aiofiles.open('emails.txt', 'a') as email_file:
+                await email_file.write(email + '\n')
+
+    return 'added email of family ' + family_id
 
 
 async def fetch_family_osh_data(browser, family_id, family_data_dict):

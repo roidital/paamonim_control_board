@@ -6,6 +6,7 @@ from enum import Enum
 # URLs
 MAIN_LOGIN_URL: Final[str] = 'https://app.paamonim.org.il'
 BUDGET_AND_BALANCES_PAGE: Final[str] = 'https://app.paamonim.org.il/budgets/budget_and_balances/'
+MAIN_FAMILY_PAGE: Final[str] = 'https://app.paamonim.org.il/budgets/show/'
 OSH_STATS_PAGE: Final[str] = 'https://app.paamonim.org.il/budgets/wallet_data/'
 URL_ACTIVE_TEAM_MEMBERS: Final[str] = 'https://app.paamonim.org.il/contacts/paam_index'
 ULR_VACATION_TEAM_MEMBERS: Final[str] = 'https://app.paamonim.org.il/contacts/paam_index?in_vacation=1'

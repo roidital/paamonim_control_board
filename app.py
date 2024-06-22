@@ -1,10 +1,12 @@
 import asyncio
-
+import nest_asyncio
 from flask import Flask, render_template, request, session, send_file, abort, redirect, url_for, flash
 
 from login.login import auto_login
 from src.main import main
 import os
+
+nest_asyncio.apply()
 
 app_dir = os.path.dirname(os.path.abspath(__file__))
 template_dir = os.path.join(app_dir, 'templates')
@@ -31,18 +33,21 @@ def do_login():
 
 
 async def async_main():
+    # create a lock to be used later on but it must be created in the main thread where asyncio.run() is called
+    lock = asyncio.Lock()
     # Get form data
     username = request.form.get('username')
     password = request.form.get('password')
     unit_name = request.form.get('unit_name')
     do_teams_list_sheet = 'create_teams_list_sheet' in request.form
     do_families_sheet = 'create_families_sheet' in request.form
+    create_email_list = 'create_email_list' in request.form
     browser = await auto_login(username, password)
     if not browser:
         flash("שגיאת התחברות, אנא בדוק/י שהיוזר והסיסמא נכונים")
         return redirect(url_for('do_login'))
 
-    await main(browser, unit_name, do_teams_list_sheet, do_families_sheet)
+    await main(browser, unit_name, do_teams_list_sheet, do_families_sheet, create_email_list, lock)
     await browser.close()
 
 
