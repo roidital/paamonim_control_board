@@ -74,9 +74,11 @@ async def retrieve_team_list(browser, unit_name, url_page, with_search_button=Fa
 
     # in case it's vacation team members page, team leader is not necessarily in the list (usually not)
     if url_page == ULR_VACATION_TEAM_MEMBERS:
+        await page.close()
         return team_list
 
     # filter out all unrelated units such as (מאגר משפחות לליווי, שם הסניף וכו׳)
+    await page.close()
     return {key: value for key, value in team_list.items() if key in team_list[key]}
 
 
@@ -151,6 +153,7 @@ async def collect_tutor_families(browser, unit_name, url_page, family_status):
         families = active_families_list[assigned_to]
         active_families_list[assigned_to] = families + [(family_name, family_link)]
 
+    await page.close()
     return active_families_list, team_leader_to_families
 
 

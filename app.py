@@ -61,8 +61,13 @@ def download_excel():
 
     # Delete the temporary file
     os.remove(temp_file_name)
-
+    cleanup()
     return response
+
+
+def cleanup():
+    os.system('rm -rf /tmp/*')
+    os.system('rm -rf /tmp/.*')
 
 
 if __name__ == '__main__':

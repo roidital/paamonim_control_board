@@ -41,6 +41,7 @@ async def create_families_sheet(sheet, browser, start_row, team_leader_to_famili
                     write_family_alerts(family_data_dict[family_id], sheet, i)
                     i += 1
                     break
+    await page.close()
     # retrieve the budget and balances data for each family (parallel execution)
     await browser_dispatcher(family_data_dict, browser)
     # print(f'### AFTER family_data_dict: {family_data_dict}')
@@ -174,9 +175,10 @@ async def browser_dispatcher(family_data_dict, browser):
 async def fetch_family_osh_data(browser, family_id, family_data_dict):
     page = await browser.newPage()
     try:
-        await page.goto(OSH_STATS_PAGE + family_id, timeout=10000)
+        await page.goto(OSH_STATS_PAGE + family_id, waitUntil='domcontentloaded')
     except:
         print(f'### ERROR: family {family_id} got timedout while browsing to OSH page')
+        await page.close()
         return 'timeout for OSH page. family_id: ' + family_id
 
     rows = await page.querySelectorAll('tbody tr')
@@ -193,16 +195,18 @@ async def fetch_family_osh_data(browser, family_id, family_data_dict):
             #print(f'### last_month_osh_value: {last_month_osh_value}')
             family_data_dict[family_id][LAST_MONTH_OSH] = last_month_osh_value
 
+    await page.close()
     return 'done with osh for family_id: ' + family_id
 
 
 async def fetch_family_data(browser, family_id, family_data_dict):
     page = await browser.newPage()
     try:
-        await page.goto(BUDGET_AND_BALANCES_PAGE + family_id, timeout=10000)
+        await page.goto(BUDGET_AND_BALANCES_PAGE + family_id, waitUntil='domcontentloaded')
     except:
-        print(f'### ERROR: family {family_id} got timedout while browsing to OSH budget and balance page')
-        return 'timeout for OSH page. family_id: ' + family_id
+        print(f'### ERROR: family {family_id} got timedout while browsing to budget and balance page')
+        await page.close()
+        return 'timeout for budget_balance page. family_id: ' + family_id
 
     try:
         await page.waitForSelector('#expenseTable')
