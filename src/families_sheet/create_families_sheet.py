@@ -163,10 +163,13 @@ async def browser_dispatcher(family_data_dict, browser, do_email_list_sheet, loc
              if family_data_dict[family_id]['last_shikuf_bitsua'].strip() != '']
     osh_tasks = [fetch_family_osh_data(browser, family_id, family_data_dict) for family_id in family_data_dict.keys()]
     tasks.extend(osh_tasks)
+    pages_content = await asyncio.gather(*tasks)
+    for page_content in pages_content:
+        print(f'### page_content: {page_content}')
+
     if do_email_list_sheet:
         email_tasks = [create_email_list_sheet(browser, family_id, lock) for family_id in family_data_dict.keys()]
-        tasks.extend(email_tasks)
-    pages_content = await asyncio.gather(*tasks)
+    pages_content = await asyncio.gather(*email_tasks)
 
     for page_content in pages_content:
         print(f'### page_content: {page_content}')
@@ -177,24 +180,24 @@ async def browser_dispatcher(family_data_dict, browser, do_email_list_sheet, loc
 async def create_email_list_sheet(browser, family_id, lock):
     page = await browser.newPage()
     try:
-        await page.goto(MAIN_FAMILY_PAGE + family_id)
+        await page.goto(MAIN_FAMILY_PAGE + family_id, waitUntil='domcontentloaded')
     except:
         print(f'### ERROR: family {family_id} got timeout while browsing to family page')
+        await page.close()
         return 'ERROR: timeout for family page. family_id: ' + family_id
     email = await page.evaluate('''() => {
         const dd = document.querySelector('dd div');
         return dd ? dd.innerHTML : null;
     }''')
+    await page.close()
     #print(f'### email: {email}')
 
     # if family_id is not already in the email list
-    async with aiofiles.open('families.txt', 'r') as families_file:
-        families = await families_file.read()
-    if family_id not in families:
+    async with aiofiles.open('emails.txt', 'r') as read_emails_file:
+        emails = await read_emails_file.read()
+    if email not in emails:
         # Use the lock to ensure only one coroutine is writing to the files at a time
         async with lock:
-            async with aiofiles.open('families.txt', 'a') as families_file:
-                await families_file.write(family_id + '\n')
             async with aiofiles.open('emails.txt', 'a') as email_file:
                 await email_file.write(email + '\n')
 
