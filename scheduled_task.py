@@ -9,8 +9,8 @@ if current_day == 1:
         email_list = [line.strip() for line in file]
 
     # email content
-    subject = "תזכורת מפעמונים"
-    body = "This is a test email"
+    subject = "תזכורת מפעמונים למלא יתרת עוש באפליקציה"
+    body = "היום הראשון לחודש - היכנסו לאפליקציה למלא את יתרת העו״ש של היום, כך תוכלו לעקוב אחר התקדמותכם מחודש לחודש ולוודא שהרישום שלכם באפליקציה תואם את מה שקורה בפועל"
 
     # your email credentials
     your_email = "roidital@gmail.com"
