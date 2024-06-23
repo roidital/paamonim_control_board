@@ -169,10 +169,9 @@ async def browser_dispatcher(family_data_dict, browser, do_email_list_sheet, loc
 
     if do_email_list_sheet:
         email_tasks = [create_email_list_sheet(browser, family_id, lock) for family_id in family_data_dict.keys()]
-    pages_content = await asyncio.gather(*email_tasks)
-
-    for page_content in pages_content:
-        print(f'### page_content: {page_content}')
+        pages_content = await asyncio.gather(*email_tasks)
+        for page_content in pages_content:
+            print(f'### page_content: {page_content}')
 
     await browser.close()
 
