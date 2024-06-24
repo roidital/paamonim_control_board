@@ -156,6 +156,12 @@ def set_budget_and_balances_to_excel(family_data, sheet):
                        int(family_data[CURRENT_MONTH_OSH].replace(',', ''))-int(family_data[LAST_MONTH_OSH].replace(',', '')), adjust_width=True)
 
 
+def _chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+
 async def browser_dispatcher(family_data_dict, browser, do_email_list_sheet, lock):
     # in case the family doesn't have a shikuf/bitsua - it means the BUDGET_AND_BALANCES_PAGE page doesn't exist
     # which will follow a timeout exception in the fetch_family_data function
@@ -163,9 +169,10 @@ async def browser_dispatcher(family_data_dict, browser, do_email_list_sheet, loc
              if family_data_dict[family_id]['last_shikuf_bitsua'].strip() != '']
     osh_tasks = [fetch_family_osh_data(browser, family_id, family_data_dict) for family_id in family_data_dict.keys()]
     tasks.extend(osh_tasks)
-    pages_content = await asyncio.gather(*tasks)
-    for page_content in pages_content:
-        print(f'### page_content: {page_content}')
+    for chunk in _chunks(tasks, 15):
+        pages_content = await asyncio.gather(*chunk)
+        for page_content in pages_content:
+            print(f'### page_content: {page_content}')
 
     if do_email_list_sheet:
         email_tasks = [create_email_list_sheet(browser, family_id, lock) for family_id in family_data_dict.keys()]
