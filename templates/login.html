@@ -40,8 +40,14 @@
         #loadingMessage {
             display: none;
         }
+        #flashMessage {
+           color: red;
+        }
     </style>
     <script>
+        function hideFlashMessage() {
+           document.getElementById('flashMessage').style.display = 'none';
+        }
         function showLoadingMessage() {
             document.getElementById('loadingMessage').style.display = 'block';
         }
@@ -51,12 +57,12 @@
     <div class="container">
         {% with messages = get_flashed_messages() %}
             {% if messages %}
-                <div class="alert alert-warning">
+                <div class="alert alert-warning" id="flashMessage">
                     {{ messages[0] }}
                 </div>
             {% endif %}
         {% endwith %}
-        <form method="POST" action="/login" onsubmit="showLoadingMessage()">
+        <form method="POST" action="/login" onsubmit="hideFlashMessage(); showLoadingMessage()">
             <label for="username">מהו שם המשתמש שלך בפעמונים</label><br>
             <input type="text" id="username" name="username"><br>
             <label for="password">הכנס/י את הסיסמא שלך בפעמונים</label><br>

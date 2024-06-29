@@ -42,6 +42,8 @@ async def main(browser, unit_name, do_teams_list_sheet, do_families_sheet, do_em
 
     if do_teams_list_sheet:
         team_leader_to_families = await create_teams_list_sheet(browser, unit_name, wb)
+        if not team_leader_to_families:
+            return None
 
     if do_families_sheet:
         if not do_teams_list_sheet:
@@ -53,3 +55,4 @@ async def main(browser, unit_name, do_teams_list_sheet, do_families_sheet, do_em
 
     save_workbook(wb)
     print(f'### DONE')
+    return True

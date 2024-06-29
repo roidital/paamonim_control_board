@@ -37,6 +37,11 @@ async def filter_unit_name_no_search_button(page, unit_name):
     # wait for the options to be visible
     await page.waitForSelector('.betterselecter-op', {'visible': True})
 
+    options = await page.querySelectorAll('.betterselecter-op')
+    if not options:
+        print(f'### ERROR: unit name: {unit_name} not found')
+        return None
+
     # count the rows before filtering the table
     #current_row_count = len(await page.querySelectorAll(f'tr[id^={filter_by}]'))
     try:
@@ -46,7 +51,7 @@ async def filter_unit_name_no_search_button(page, unit_name):
         await option.click()
     except:
         print(f'### ERROR: unit name: {unit_name} not found')
-        exit(0)
+        return None
 
     # while True:
     #     new_row_count = len(await page.querySelectorAll(f'tr[id^={filter_by}]'))
@@ -54,6 +59,7 @@ async def filter_unit_name_no_search_button(page, unit_name):
     #         break
     #     await asyncio.sleep(0.1)  # wait a bit before checking again
     await asyncio.sleep(2)
+    return 1
 
 
 async def filter_unit_name_with_search_button(page, unit_name, families_status = FamilyStatus.ACTIVE):

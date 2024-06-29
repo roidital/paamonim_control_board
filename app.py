@@ -28,7 +28,9 @@ def login_form():
 
 @app.route('/login', methods=['POST'])
 def do_login():
-    asyncio.run(async_main())
+    main_ret = asyncio.run(async_main())
+    if main_ret:
+        return main_ret
     return redirect(url_for('download_excel'))
 
 
@@ -47,8 +49,13 @@ async def async_main():
         flash("שגיאת התחברות, אנא בדוק/י שהיוזר והסיסמא נכונים")
         return redirect(url_for('do_login'))
 
-    await main(browser, unit_name, do_teams_list_sheet, do_families_sheet, create_email_list, lock)
+    ret_value = await main(browser, unit_name, do_teams_list_sheet, do_families_sheet, create_email_list, lock)
     await browser.close()
+    if not ret_value:
+        flash(f"היחידה שהזנת {unit_name} לא נמצאה, אנא וודא/י שהקלדת נכון ללא רווחים וסימני פיסוק")
+        return redirect(url_for('do_login'))
+    return None
+
 
 
 @app.route('/download', methods=['GET'])

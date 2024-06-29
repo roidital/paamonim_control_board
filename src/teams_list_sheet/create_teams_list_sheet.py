@@ -13,6 +13,8 @@ from openpyxl.styles import Font, Alignment, Color
 
 async def create_teams_list_sheet(browser, unit_name, wb):
     active_team_list = await retrieve_team_list(browser, unit_name, URL_ACTIVE_TEAM_MEMBERS)
+    if not active_team_list:
+        return None
     print(f'active team list: {active_team_list}')
 
     sheet = wb[TEAMS_LIST_SHEET_NAME]
@@ -20,6 +22,8 @@ async def create_teams_list_sheet(browser, unit_name, wb):
     update_wb_active_team_members(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, active_team_list)
 
     vacation_team_list = await retrieve_team_list(browser, unit_name, ULR_VACATION_TEAM_MEMBERS)
+    if not vacation_team_list:
+        return None
     print(f'vacation team list: {vacation_team_list}')
 
     # add vacation team members to the excel file
@@ -56,8 +60,12 @@ async def retrieve_team_list(browser, unit_name, url_page, with_search_button=Fa
     if with_search_button:
         await filter_unit_name_with_search_button(browser, unit_name, families_status)
     else:
-        await filter_unit_name_no_search_button(page, unit_name)
-        print('### filter_unit_name_no_search_button DONE')
+        unit_search = await filter_unit_name_no_search_button(page, unit_name)
+        if unit_search:
+            print('### filter_unit_name_no_search_button DONE')
+        else:
+            print('### filter_unit_name_no_search_button FAILED')
+            return None
 
     team_list = defaultdict(set)
     rows = await page.querySelectorAll('tr[id^="user_"]')
