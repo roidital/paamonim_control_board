@@ -16,7 +16,14 @@ async def create_families_sheet(sheet, browser, start_row, team_leader_to_famili
     # to reset the checkboxes checked by previous steps
     page = await browser.newPage()
     await page.goto(URL_FAMILIES_STATUS_PAGE)
-    await filter_unit_name_with_search_button(page, unit_name)
+    unit_search = await filter_unit_name_with_search_button(page, unit_name)
+    if unit_search:
+        print('### filter_unit_name_with_search_button DONE')
+    else:
+        print('### filter_unit_name_with_search_button FAILED')
+        return None
+
+    #print(f'### team_leader_to_families: {team_leader_to_families}')
 
     rows = await page.querySelectorAll('tr[id^="family_"]')
 
@@ -29,10 +36,12 @@ async def create_families_sheet(sheet, browser, start_row, team_leader_to_famili
             for row in rows:
                 cells = await row.querySelectorAll('td')
                 cell0_value = await page.evaluate('(element) => element.textContent', cells[0])
+                #print(f'### cell0_value: {cell0_value} family: {family}')
                 if family in cell0_value:
                     # get the the family's id number (from html)
                     family_id = await (await row.getProperty('id')).jsonValue()
                     family_id = family_id.split('_')[1]
+                    #print(f'### family_id: {family_id}')
                     await retrieve_data_from_common_families_table(page, row, family_id, family_data_dict)
                     family_data_dict[family_id]['line_num'] = i
                     set_values_from_common_families_table_to_excel(family_data_dict[family_id], sheet)
@@ -52,6 +61,8 @@ async def create_families_sheet(sheet, browser, start_row, team_leader_to_famili
     __apply_border_to_team_table(sheet, 1, num_of_table_rows - 1,
                                  FAMILIES_SHEET_FIRST_COLUMN_INDEX,
                                  (FAMILIES_SHEET_LAST_COLUMN_INDEX-FAMILIES_SHEET_FIRST_COLUMN_INDEX))
+
+    return 1
 
 
 # family_data_dict is an output parameter, a dictionary populated families data

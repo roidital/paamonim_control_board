@@ -31,6 +31,8 @@ async def create_teams_list_sheet(browser, unit_name, wb):
 
     tutor_to_families, team_leader_to_families = await collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
                                                                         FamilyStatus.ACTIVE)
+    if not tutor_to_families:
+        return None
     # print(f'team_leader_to_families: {team_leader_to_families}')
 
     # add the amount of active families + links (per tutor) to the excel file
@@ -39,6 +41,8 @@ async def create_teams_list_sheet(browser, unit_name, wb):
 
     tutor_to_ready_families, _ = await collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
                                                         FamilyStatus.READY_TO_START)
+    if not tutor_to_ready_families:
+        return None
     print(f'ready to start families list: {tutor_to_ready_families}')
 
     update_wb_families_status(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, READY_FAMILY_COUNT_COLUMN_SHIFT,
@@ -75,6 +79,7 @@ async def retrieve_team_list(browser, unit_name, url_page, with_search_button=Fa
         cells = await row.querySelectorAll('td')
         cell1_value = await page.evaluate('(element) => element.textContent', cells[1])
         cell2_value = await page.evaluate('(element) => element.textContent', cells[2])
+        cell2_value = ' '.join(cell2_value.split())
         current_user = cell1_value if cell1_value else current_user
         split_text = re.split('מרכז שרון - |מרכז שרון – ', cell2_value)
         if len(split_text) > 1:
@@ -142,7 +147,12 @@ async def collect_tutor_families(browser, unit_name, url_page, family_status):
     page = await browser.newPage()
     await page.goto(url_page)
 
-    await filter_unit_name_with_search_button(page, unit_name, family_status)
+    unit_search = await filter_unit_name_with_search_button(page, unit_name, family_status)
+    if unit_search:
+        print('### filter_unit_name_with_search_button DONE')
+    else:
+        print('### filter_unit_name_with_search_button FAILED')
+        return None, None
 
     active_families_list = defaultdict(lambda: [])
     rows = await page.querySelectorAll('tr[id^="family_"]')
@@ -155,6 +165,7 @@ async def collect_tutor_families(browser, unit_name, url_page, family_status):
         a_element = await cells[0].querySelector('a')
         family_link = await page.evaluate('(element) => element.href', a_element)
         unit_full_name = await page.evaluate('(element) => element.textContent', cells[1])
+        unit_full_name = ' '.join(unit_full_name.split())
         team_leader = re.split('מרכז שרון - |מרכז שרון – ', unit_full_name)
         if len(team_leader) > 1:
             team_leader_to_families[team_leader[1]].append(family_name)

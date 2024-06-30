@@ -70,6 +70,11 @@ async def filter_unit_name_with_search_button(page, unit_name, families_status =
     # wait for the options to be visible
     await page.waitForSelector('.betterselecter-op', {'visible': True})
 
+    options = await page.querySelectorAll('.betterselecter-op')
+    if not options:
+        print(f'### ERROR: unit name: {unit_name} not found')
+        return None
+
     # find the relevant unit we wish to analyze
     try:
         option = await page.waitForXPath(f'//div[@class="betterselecter-op" and contains(text(), "{unit_name}")]',
@@ -78,7 +83,7 @@ async def filter_unit_name_with_search_button(page, unit_name, families_status =
         await option.click()
     except:
         print(f'### ERROR: unit name: {unit_name} not found')
-        exit(0)
+        return None
 
     if families_status == FamilyStatus.READY_TO_START:
         started_filter = await page.querySelector('#started')

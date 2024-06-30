@@ -50,8 +50,13 @@ async def main(browser, unit_name, do_teams_list_sheet, do_families_sheet, do_em
             _, team_leader_to_families = await collect_tutor_families(browser, unit_name,
                                                                                 URL_FAMILIES_STATUS_PAGE,
                                                                                 FamilyStatus.ACTIVE)
+            if not team_leader_to_families:
+                return None
+
         sheet = wb[FAMILIES_SHEET_NAME]
-        await create_families_sheet(sheet, browser, FAMILIES_SHEET_FIRST_ROW_NUM, team_leader_to_families, unit_name, do_email_list_sheet, lock)
+        ret_create_families = await create_families_sheet(sheet, browser, FAMILIES_SHEET_FIRST_ROW_NUM, team_leader_to_families, unit_name, do_email_list_sheet, lock)
+        if not ret_create_families:
+            return None
 
     save_workbook(wb)
     print(f'### DONE')
