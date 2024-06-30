@@ -42,7 +42,7 @@ async def main(browser, unit_name, do_teams_list_sheet, do_families_sheet, do_em
 
     if do_teams_list_sheet:
         team_leader_to_families = await create_teams_list_sheet(browser, unit_name, wb)
-        if not team_leader_to_families:
+        if team_leader_to_families is None:
             return None
 
     if do_families_sheet:
@@ -50,7 +50,7 @@ async def main(browser, unit_name, do_teams_list_sheet, do_families_sheet, do_em
             _, team_leader_to_families = await collect_tutor_families(browser, unit_name,
                                                                                 URL_FAMILIES_STATUS_PAGE,
                                                                                 FamilyStatus.ACTIVE)
-            if not team_leader_to_families:
+            if team_leader_to_families is None:
                 return None
 
         sheet = wb[FAMILIES_SHEET_NAME]

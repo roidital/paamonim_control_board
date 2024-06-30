@@ -13,7 +13,7 @@ from openpyxl.styles import Font, Alignment, Color
 
 async def create_teams_list_sheet(browser, unit_name, wb):
     active_team_list = await retrieve_team_list(browser, unit_name, URL_ACTIVE_TEAM_MEMBERS)
-    if not active_team_list:
+    if active_team_list is None:
         return None
     print(f'active team list: {active_team_list}')
 
@@ -22,7 +22,7 @@ async def create_teams_list_sheet(browser, unit_name, wb):
     update_wb_active_team_members(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, active_team_list)
 
     vacation_team_list = await retrieve_team_list(browser, unit_name, ULR_VACATION_TEAM_MEMBERS)
-    if not vacation_team_list:
+    if vacation_team_list is None:
         return None
     print(f'vacation team list: {vacation_team_list}')
 
@@ -31,7 +31,7 @@ async def create_teams_list_sheet(browser, unit_name, wb):
 
     tutor_to_families, team_leader_to_families = await collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
                                                                         FamilyStatus.ACTIVE)
-    if not tutor_to_families:
+    if tutor_to_families is None:
         return None
     # print(f'team_leader_to_families: {team_leader_to_families}')
 
@@ -41,7 +41,7 @@ async def create_teams_list_sheet(browser, unit_name, wb):
 
     tutor_to_ready_families, _ = await collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
                                                         FamilyStatus.READY_TO_START)
-    if not tutor_to_ready_families:
+    if tutor_to_ready_families is None:
         return None
     print(f'ready to start families list: {tutor_to_ready_families}')
 

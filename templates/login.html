@@ -45,6 +45,14 @@
         }
     </style>
     <script>
+        function onSubmit() {
+           try {
+               hideFlashMessage();
+           } catch (error) {
+               console.error('An error occurred in hideFlashMessage: ', error);
+           }
+           showLoadingMessage();
+        }
         function hideFlashMessage() {
            document.getElementById('flashMessage').style.display = 'none';
         }
@@ -62,7 +70,7 @@
                 </div>
             {% endif %}
         {% endwith %}
-        <form method="POST" action="/login" onsubmit="hideFlashMessage(); showLoadingMessage()">
+        <form method="POST" action="/login" onsubmit="onSubmit()">
             <label for="username">מהו שם המשתמש שלך בפעמונים</label><br>
             <input type="text" id="username" name="username"><br>
             <label for="password">הכנס/י את הסיסמא שלך בפעמונים</label><br>
