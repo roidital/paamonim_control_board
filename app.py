@@ -41,6 +41,9 @@ async def async_main():
     username = request.form.get('username')
     password = request.form.get('password')
     unit_name = request.form.get('unit_name')
+    if not input_validation(username, password, unit_name):
+        flash("אחד או יותר מהשדות ריקים, אנא מלא/י את כל השדות: שם משתמש, סיסמא ושם יחידה")
+        return redirect(url_for('do_login'))
     do_teams_list_sheet = 'create_teams_list_sheet' in request.form
     do_families_sheet = 'create_families_sheet' in request.form
     create_email_list = 'create_email_list' in request.form
@@ -55,6 +58,10 @@ async def async_main():
         flash(f"היחידה שהזנת {unit_name} לא נמצאה, אנא וודא/י שהקלדת נכון ללא רווחים וסימני פיסוק")
         return redirect(url_for('do_login'))
     return None
+
+
+def input_validation(username, password, unit_name):
+    return username and password and unit_name.split()
 
 
 
