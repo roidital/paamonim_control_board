@@ -91,6 +91,13 @@ async def filter_unit_name_with_search_button(page, unit_name, families_status =
         ordered_filter = await page.querySelector('#ordered')
         await ordered_filter.click()
 
+    # find the checkbox of HAD PAAMONI, do not do this code for ready to start families since it would mark off the checkbox
+    checkbox = await page.evaluateHandle('''() => {
+        const labels = Array.from(document.querySelectorAll('li.serviceTypes'));
+        return labels.find(label => label.textContent.includes('חד פעמוני')).querySelector('input[type="checkbox"]');
+    }''')
+    await checkbox.click()
+
     search_button = await page.querySelector('#searchButton')
     await search_button.click()
 
