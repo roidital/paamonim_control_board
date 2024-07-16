@@ -39,7 +39,7 @@ def create_table():
             connection.close()
 
 
-def insert_user_strings(user_data):
+def insert_user_strings(user_data_list):
     connection = connect_to_db()
     if connection:
         try:
@@ -48,10 +48,10 @@ def insert_user_strings(user_data):
             INSERT INTO users_details (user_details_comma_sep)
             VALUES (%s)
             """
-            for user_details_list in user_data.items():
-                # Convert user's details into a single comma-separated string
-                concatenated_line_to_db = ",".join(user_details_list)
-                cursor.execute(insert_query, concatenated_line_to_db)
+
+            # Convert user's details into a single comma-separated string
+            concatenated_line_to_db = ",".join(user_data_list)
+            cursor.execute(insert_query, concatenated_line_to_db)
             connection.commit()
         except Error as e:
             print(f"Failed to insert data: {e}")
