@@ -61,6 +61,6 @@ def insert_user_strings(user_data):
 
 
 def register_user_to_receive_auto_excel(username, password, unit_name):
-    user_data = {[username, password, unit_name]}
+    user_data = [username, password, unit_name]
     create_table()  # Create the table if it doesn't exist
     insert_user_strings(user_data)
