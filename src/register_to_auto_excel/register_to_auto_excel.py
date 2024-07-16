@@ -45,13 +45,11 @@ def insert_user_strings(user_data_list):
         try:
             cursor = connection.cursor()
             insert_query = """
-            INSERT INTO users_details (user_details_comma_sep)
-            VALUES (%s)
+            INSERT INTO users_details (username, password, unit_name)
+            VALUES (%s, %s, %s)
             """
 
-            # Convert user's details into a single comma-separated string
-            concatenated_line_to_db = ",".join(user_data_list)
-            cursor.execute(insert_query, concatenated_line_to_db)
+            cursor.execute(insert_query, tuple(user_data_list))
             connection.commit()
         except Error as e:
             print(f"Failed to insert data: {e}")
