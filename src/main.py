@@ -4,8 +4,8 @@ from flask import session
 import tempfile
 from src.common.constants import EXCEL_FILENAME, FAMILIES_SHEET_NAME, FAMILIES_SHEET_FIRST_ROW_NUM, \
     URL_FAMILIES_STATUS_PAGE, FamilyStatus
-from src.families_sheet.create_families_sheet import create_families_sheet
-from src.teams_list_sheet.create_teams_list_sheet import create_teams_list_sheet, collect_tutor_families
+from src.create_families_sheet import create_families_sheet
+from src.create_teams_list_sheet import create_teams_list_sheet, collect_tutor_families
 
 
 def init_workbook(excel_filename):
