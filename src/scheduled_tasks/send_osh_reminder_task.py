@@ -1,5 +1,10 @@
 from datetime import datetime
-
+import sys
+import os
+# Add the parent directory of `src` to sys.path to ensure it can be found
+script_dir = os.path.dirname(os.path.abspath(__file__))  # Directory of the script
+parent_dir = os.path.dirname(script_dir)  # Parent directory
+sys.path.append(parent_dir)
 from src.common.common_utils import send_email
 
 
