@@ -1,20 +1,5 @@
-import mysql.connector
 from mysql.connector import Error
-
-
-def connect_to_db():
-    try:
-        connection = mysql.connector.connect(
-            host='roidital.mysql.pythonanywhere-services.com',
-            database='roidital$default',
-            user='roidital',
-            password='mypass11'
-        )
-        if connection.is_connected():
-            return connection
-    except Error as e:
-        print(f"Error while connecting to MySQL: {e}")
-        return None
+from common.common_utils import connect_to_db
 
 
 def create_table():
@@ -38,7 +23,7 @@ def create_table():
             connection.close()
 
 
-def insert_user_strings(user_data_list):
+def insert_user_details_to_db(user_data_list):
     connection = connect_to_db()
     if connection:
         try:
@@ -60,4 +45,4 @@ def insert_user_strings(user_data_list):
 def register_user_to_receive_auto_excel(username, password, unit_name):
     user_data = [username, password, unit_name]
     create_table()  # Create the table if it doesn't exist
-    insert_user_strings(user_data)
+    insert_user_details_to_db(user_data)

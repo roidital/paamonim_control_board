@@ -4,6 +4,8 @@ import openpyxl
 from src.common.constants import LEFT_TOP_BORDER, RIGHT_TOP_BORDER, TOP_BORDER, BOTTOM_BORDER, LEFT_BOTTOM_BORDER, \
     RIGHT_BOTTOM_BORDER, LEFT_BORDER, RIGHT_BORDER, BOLD_FONT, FamilyStatus, LIGHT_BLUE_FILL
 import asyncio
+import mysql.connector
+from mysql.connector import Error
 
 
 # app = QApplication([])  # QApplication instance is required for QMessageBox
@@ -149,3 +151,18 @@ def __adjust_row_height_to_text(cell):
     cell_value_str = str(cell.value)
     if len(cell_value_str) > cell.parent.row_dimensions[cell.row].height:
         cell.parent.row_dimensions[cell.row].height = len(cell_value_str) * 1.1
+
+
+def connect_to_db():
+    try:
+        connection = mysql.connector.connect(
+            host='roidital.mysql.pythonanywhere-services.com',
+            database='roidital$default',
+            user='roidital',
+            password='mypass11'
+        )
+        if connection.is_connected():
+            return connection
+    except Error as e:
+        print(f"Error while connecting to MySQL: {e}")
+        return None
