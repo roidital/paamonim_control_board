@@ -11,27 +11,28 @@ if current_day == 1:
     # email content
     subject = "תזכורת מפעמונים למלא יתרת עוש באפליקציה"
     body = "היום הראשון לחודש - היכנסו לאפליקציה למלא את יתרת העו״ש של היום, כך תוכלו לעקוב אחר התקדמותכם מחודש לחודש ולוודא שהרישום שלכם באפליקציה תואם את מה שקורה בפועל"
+    body += "\n במידה ואינך מעוניינ/ת להמשיך ולקבל תזכורות אלו - אנא שלח/י לי מייל חוזר להסירך ואדאג לכך"
 
     # your email credentials
-    your_email = "roidital@gmail.com"
-    your_password = "zshx lkzh bhpl rrqm"
+    sender_email = "roidital@gmail.com"
+    sender_password = "zshx lkzh bhpl rrqm"
 
     # login to the email server
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
-    server.login(your_email, your_password)
+    server.login(sender_email, sender_password)
 
     # send the email to each address
     for email in email_list:
         if '@' in email:
             # setup the email
             msg = MIMEMultipart()
-            msg['From'] = your_email
+            msg['From'] = sender_email
             msg['To'] = email
             msg['Subject'] = subject
             msg.attach(MIMEText(body, 'plain'))
             text = msg.as_string()
-            server.sendmail(your_email, email, text)
+            server.sendmail(sender_email, email, text)
 
     # logout of the email server
     server.quit()
