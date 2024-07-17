@@ -1,10 +1,12 @@
 from datetime import datetime
 import sys
 import os
-# Add the parent directory of `src` to sys.path to ensure it can be found
+# Calculate the project root directory (two levels up from this script)
 script_dir = os.path.dirname(os.path.abspath(__file__))  # Directory of the script
-parent_dir = os.path.dirname(script_dir)  # Parent directory
-sys.path.append(parent_dir)
+project_root = os.path.dirname(os.path.dirname(script_dir))  # Project root directory
+
+# Append the project root to sys.path
+sys.path.append(project_root)
 from src.common.common_utils import send_email
 
 
