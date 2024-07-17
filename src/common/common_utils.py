@@ -6,7 +6,11 @@ from src.common.constants import LEFT_TOP_BORDER, RIGHT_TOP_BORDER, TOP_BORDER, 
 import asyncio
 import mysql.connector
 from mysql.connector import Error
-
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
 # app = QApplication([])  # QApplication instance is required for QMessageBox
 
@@ -166,3 +170,37 @@ def connect_to_db():
     except Error as e:
         print(f"Error while connecting to MySQL: {e}")
         return None
+
+
+def send_email(to_address, subject, body, attachment_filename=None):
+    # your email credentials
+    sender_email = "roidital@gmail.com"
+    sender_password = "zshx lkzh bhpl rrqm"
+
+    # login to the email server
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(sender_email, sender_password)
+
+    # setup the email
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = to_address
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
+    if attachment_filename:
+        attachment = open(attachment_filename, "rb")
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload((attachment).read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', "attachment; filename= %s" % attachment_filename)
+        msg.attach(part)
+
+    text = msg.as_string()
+    server.sendmail(sender_email, to_address, text)
+    if attachment_filename:
+        attachment.close()
+
+    # logout of the email server
+    server.quit()
