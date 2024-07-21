@@ -6,6 +6,8 @@ from login.login import auto_login
 from src.main import main
 import os
 
+from src.register_to_auto_excel import register_user_to_receive_auto_excel
+
 nest_asyncio.apply()
 
 app_dir = os.path.dirname(os.path.abspath(__file__))
@@ -47,12 +49,17 @@ async def async_main():
     do_teams_list_sheet = 'create_teams_list_sheet' in request.form
     do_families_sheet = 'create_families_sheet' in request.form
     create_email_list = 'create_email_list' in request.form
+    do_register_to_auto_excel = 'register_to_auto_excel' in request.form
     browser = await auto_login(username, password)
     if not browser:
         flash("שגיאת התחברות, אנא בדוק/י שהיוזר והסיסמא נכונים")
         return redirect(url_for('do_login'))
 
     ret_value = await main(browser, unit_name, do_teams_list_sheet, do_families_sheet, create_email_list, lock)
+
+    if do_register_to_auto_excel:
+        register_user_to_receive_auto_excel(username, password, unit_name)
+
     await browser.close()
     if not ret_value:
         flash(f"היחידה שהזנת {unit_name} לא נמצאה, אנא וודא/י שהקלדת נכון ללא רווחים וסימני פיסוק")
