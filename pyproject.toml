@@ -12,6 +12,7 @@ flask = {extras = ["async"], version = "^3.0.3"}
 pyppeteer = "^2.0.0"
 nest-asyncio = "^1.6.0"
 aiofiles = "^23.2.1"
+mysql-connector-python = "^9.0.0"
 
 [build-system]
 requires = ["poetry-core"]

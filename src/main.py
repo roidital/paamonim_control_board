@@ -24,11 +24,12 @@ def init_workbook(excel_filename):
 
 def save_workbook(wb):
     # Create a temporary file
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    # temp_file = tempfile.NamedTemporaryFile(delete=False)
     # Save the workbook to the temporary file
-    wb.save(temp_file.name)
+    wb.save('cockpit.xlsx')
     # Store the temporary file's name in the session
-    session['temp_file'] = temp_file.name
+    # session['temp_file'] = temp_file.name
+    os.environ['EXCEL_FILENAME'] = 'cockpit.xlsx'
 
 
 async def main(browser, unit_name, do_teams_list_sheet, do_families_sheet, do_email_list_sheet, lock):

@@ -1,5 +1,5 @@
 from mysql.connector import Error
-from common.common_utils import connect_to_db
+from src.common.common_utils import connect_to_db
 
 
 def create_table():
