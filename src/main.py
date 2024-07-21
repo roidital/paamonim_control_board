@@ -1,7 +1,5 @@
 import os
 import openpyxl
-from flask import session
-import tempfile
 from src.common.constants import EXCEL_FILENAME, FAMILIES_SHEET_NAME, FAMILIES_SHEET_FIRST_ROW_NUM, \
     URL_FAMILIES_STATUS_PAGE, FamilyStatus
 from src.create_families_sheet import create_families_sheet
@@ -23,12 +21,7 @@ def init_workbook(excel_filename):
 
 
 def save_workbook(wb):
-    # Create a temporary file
-    # temp_file = tempfile.NamedTemporaryFile(delete=False)
-    # Save the workbook to the temporary file
     wb.save('cockpit.xlsx')
-    # Store the temporary file's name in the session
-    # session['temp_file'] = temp_file.name
     os.environ['EXCEL_FILENAME'] = 'cockpit.xlsx'
 
 

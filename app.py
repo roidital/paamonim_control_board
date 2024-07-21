@@ -1,6 +1,6 @@
 import asyncio
 import nest_asyncio
-from flask import Flask, render_template, request, session, send_file, abort, redirect, url_for, flash
+from flask import Flask, render_template, request, send_file, abort, redirect, url_for, flash
 
 from login.login import auto_login
 from src.main import main
@@ -71,11 +71,10 @@ def input_validation(username, password, unit_name):
     return username and password and unit_name.split()
 
 
-
 @app.route('/download', methods=['GET'])
 def download_excel():
     # Retrieve the temporary file's name from the session
-    temp_file_name = session.get('temp_file')
+    temp_file_name = os.environ.get('EXCEL_FILENAME', '')
 
     if temp_file_name is None or not os.path.exists(temp_file_name):
         # If there's no file to download, send a 404 Not Found response

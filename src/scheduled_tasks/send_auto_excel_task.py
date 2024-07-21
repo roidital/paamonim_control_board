@@ -10,7 +10,6 @@ from src.common.common_utils import connect_to_db, send_email
 from mysql.connector import Error
 import asyncio
 from src.main import main
-from flask import session
 
 # create a lock to be used later on but it must be created in the main thread where asyncio.run() is called
 lock = asyncio.Lock()
@@ -44,9 +43,13 @@ async def generate_auto_excel(username, password, unit_name):
     ret_value = await main(browser, unit_name, True, True, False, lock)
     await browser.close()
     if not ret_value:
-        print(f'### error occurred while creating the auto excel')
+        print(f'### error occurred while creating the auto excel for user: {username} unit_name: {unit_name}')
         return None
     attachment_filename = os.environ.get('EXCEL_FILENAME', '')
+    if attachment_filename is None or not os.path.exists(attachment_filename):
+        print(f"### failed to create the excel file for user: {username} of unit: {unit_name}. No email will be sent")
+        return None
+
     send_email(username, "your Paamonim's Excel file is attached", "attached below is your Excel", attachment_filename)
     os.remove(attachment_filename)
     # cleanup temp files which were written during the excel creation
@@ -55,4 +58,3 @@ async def generate_auto_excel(username, password, unit_name):
 
 if __name__ == "__main__":
     asyncio.run(fetch_all_users_details_from_db())
-
