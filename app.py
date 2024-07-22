@@ -5,7 +5,6 @@ from flask import Flask, render_template, request, send_file, abort, redirect, u
 from login.login import auto_login
 from src.main import main
 import os
-from time import sleep
 from src.register_to_auto_excel import register_user_to_receive_auto_excel
 
 nest_asyncio.apply()
@@ -74,13 +73,12 @@ def input_validation(username, password, unit_name):
 @app.route('/download', methods=['GET'])
 def download_excel():
     # Retrieve the temporary file's name from the session
-    temp_file_name = os.environ.get('EXCEL_FILENAME', '')
+    temp_file_name = os.environ.get('EXCEL_FILENAME', 'cockpit.xlsx')
 
     if temp_file_name is None or not os.path.exists(temp_file_name):
-        sleep(3) # allow one retry
-        if temp_file_name is None or not os.path.exists(temp_file_name):
-            flash("הורדת הקובץ נכשלה")
-            abort(404)
+        print(f'### failed to create the excel file. {temp_file_name}')
+        flash("הורדת הקובץ נכשלה")
+        abort(404)
 
     # Create a Flask response with the Excel file
     response = send_file(temp_file_name, as_attachment=True, download_name='cockpit.xlsx',
