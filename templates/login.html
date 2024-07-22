@@ -17,6 +17,7 @@
             flex-direction: column;
             align-items: center;
             background-color: rgba(255, 255, 255, 0.8); /* Add a semi-transparent white background to the container to make the text more readable */
+            margin-top: 100px; /* Add some space between the top of the container and the top of the page */
         }
         form {
             text-align: center; /* Center the text inside the form */
@@ -92,7 +93,7 @@
         <div id="loadingMessage">
             ...האקסל שלך בהכנה, חשוב שלא לסגור את חלון הדפדפן הזה עד שהפעולה תסתיים, לוקח בערך דקה
         </div>
-        <img src="{{ url_for('static', filename='paamonim_logo.jpg') }}" alt="My Photo" width="300" height="300">
+        <img src="{{ url_for('static', filename='paamonim_logo.jpg') }}" alt="My Photo" width="200" height="200">
     </div>
 </body>
 </html>
