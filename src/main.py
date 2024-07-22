@@ -8,15 +8,18 @@ from src.create_teams_list_sheet import create_teams_list_sheet, collect_tutor_f
 
 def init_workbook(excel_filename):
     # copy the template file to the new excel file
-    os.system(f'cp -f cockpit_template.xlsx {excel_filename}')
+    script_dir = os.path.dirname(os.path.abspath(__file__))  # Directory of the script
+    project_root = os.path.dirname(script_dir)  # Project root directory
+    os.system(f'cp -f {project_root}/cockpit_template.xlsx {script_dir}/{excel_filename}')
 
     # check if prev command ended successfully
-    if not os.path.exists(excel_filename):
+    excel_path = script_dir+'/'+excel_filename
+    if not os.path.exists(excel_path):
         print("Error copying the template file")
         exit(1)
 
     # Load the Excel file
-    wb = openpyxl.load_workbook(excel_filename)
+    wb = openpyxl.load_workbook(excel_path)
     return wb
 
 

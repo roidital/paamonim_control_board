@@ -50,11 +50,14 @@ async def generate_auto_excel(username, password, unit_name):
         print(f"### failed to create the excel file for user: {username} of unit: {unit_name}. No email will be sent")
         return None
 
-    send_email(username, "your Paamonim's Excel file is attached", "attached below is your Excel", attachment_filename)
+    send_email(username, "האקסל המעודכן החודשי שלך הגיע", "מצורף בזאת האקסל המעודכן החודשי שלך, אם אינך מעוניינ/ת בקבלת מייל זה בעתיד אנא שלח/י לי מייל חוזר עם בקשה להסירך", attachment_filename)
     os.remove(attachment_filename)
     # cleanup temp files which were written during the excel creation
     os.system('rm -rf /tmp/.*')
     return True
 
 if __name__ == "__main__":
-    asyncio.run(fetch_all_users_details_from_db())
+    current_day = datetime.now().day
+    if current_day == 1: # sends the excel file only if it's the first day of the month
+        asyncio.run(fetch_all_users_details_from_db())
+        
