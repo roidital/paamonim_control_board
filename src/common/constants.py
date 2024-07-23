@@ -17,7 +17,7 @@ EXCEL_FILENAME: Final[str] = "../cockpit.xlsx"
 TEAMS_LIST_SHEET_NAME: Final[str] = "צוותים"
 FAMILIES_SHEET_NAME: Final[str] = "דוח משפחות"
 
-# column//row indices
+# column/row indices and offsets
 TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM: Final[int] = 6
 FAMILIES_SHEET_FIRST_ROW_NUM: Final[int] = 4
 HEADERS_ROW_NUM: Final[int] = 5
@@ -58,6 +58,7 @@ MONTH_EXPENSE: Final[str] = "month_expense"
 LAST_MONTH_DIFF: Final[str] = "last_month_diff"
 CURRENT_MONTH_OSH: Final[str] = "current_month_osh"
 LAST_MONTH_OSH: Final[str] = "last_month_osh"
+PAGE_SELECTOR = '.pageNumberCB'
 
 
 # borders

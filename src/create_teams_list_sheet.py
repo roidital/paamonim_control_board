@@ -1,4 +1,6 @@
 import re
+from time import sleep
+
 import openpyxl
 from src.common.common_utils import set_cell_value, filter_unit_name_with_search_button, \
     filter_unit_name_no_search_button, __apply_border_to_team_table, set_sum_formula_to_cell
@@ -6,7 +8,7 @@ from src.common.constants import URL_ACTIVE_TEAM_MEMBERS, TEAMS_LIST_SHEET_NAME,
     ULR_VACATION_TEAM_MEMBERS, URL_FAMILIES_STATUS_PAGE, CHECK_MARK, FamilyStatus, LIGHT_BLUE_FILL, \
     TUTOR_COLUMN_IN_TEAMS_SHEET, READY_FAMILIES_SUM_COLUMN_DIFF, ACTIVE_FAMILIES_SUM_COLUMN_DIFF, \
     TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX, ACTIVE_FAMILY_COUNT_COLUMN_SHIFT, ACTIVE_FAMILY_LIST_COLUMN_SHIFT, \
-    READY_FAMILY_COUNT_COLUMN_SHIFT, READY_FAMILY_LIST_COLUMN_SHIFT
+    READY_FAMILY_COUNT_COLUMN_SHIFT, READY_FAMILY_LIST_COLUMN_SHIFT, PAGE_SELECTOR
 from collections import defaultdict
 from openpyxl.styles import Font, Alignment, Color
 
@@ -72,18 +74,22 @@ async def retrieve_team_list(browser, unit_name, url_page, with_search_button=Fa
             return None
 
     team_list = defaultdict(set)
-    rows = await page.querySelectorAll('tr[id^="user_"]')
 
+    select_selector = PAGE_SELECTOR
+    select_element = await page.querySelector(select_selector)
     current_user = ""
-    for row in rows:
-        cells = await row.querySelectorAll('td')
-        cell1_value = await page.evaluate('(element) => element.textContent', cells[1])
-        cell2_value = await page.evaluate('(element) => element.textContent', cells[2])
-        cell2_value = ' '.join(cell2_value.split())
-        current_user = cell1_value if cell1_value else current_user
-        split_text = re.split('מרכז שרון - |מרכז שרון – ', cell2_value)
-        if len(split_text) > 1:
-            team_list[split_text[1]].add(cell1_value if cell1_value else current_user)
+    if select_element: # if select_element is found - it means there are multiple pages to this table
+        options = await page.querySelectorAll(f"{select_selector} > option")
+        # the page has 2 selectors with same name (one at the top and one at the bottom of the page
+        # so the query always counts all the options twice)
+        num_pages = len(options)/2
+        print(f"### table has {num_pages} inner pages")
+
+        for page_number in range(1, int(num_pages) + 1):
+            await change_inner_page(page, page_number, select_selector)
+            await add_members_to_team_list(page, team_list, current_user)
+    else:
+        await add_members_to_team_list(page, team_list, current_user)
 
     # in case it's vacation team members page, team leader is not necessarily in the list (usually not)
     if url_page == ULR_VACATION_TEAM_MEMBERS:
@@ -95,6 +101,25 @@ async def retrieve_team_list(browser, unit_name, url_page, with_search_button=Fa
     return {key: value for key, value in team_list.items() if key in team_list[key]}
 
 
+async def change_inner_page(page, page_number, select_selector):
+    # change the inner page to be shown in the table
+    await page.select(select_selector, str(page_number))
+    sleep(2) # wait for table to be updated
+
+
+async def add_members_to_team_list(page, team_list, current_user):
+    rows = await page.querySelectorAll('tr[id^="user_"]')
+    for row in rows:
+        cells = await row.querySelectorAll('td')
+        cell1_value = await page.evaluate('(element) => element.textContent', cells[1])
+        cell2_value = await page.evaluate('(element) => element.textContent', cells[2])
+        cell2_value = ' '.join(cell2_value.split())
+        current_user = cell1_value if cell1_value else current_user
+        split_text = re.split('מרכז שרון - |מרכז שרון – ', cell2_value)
+        if len(split_text) > 1:
+            team_list[split_text[1]].add(cell1_value if cell1_value else current_user)
+
+
 def apply_borders_to_all_teams(sheet, start_row, team_list):
     # Find the column index of the header
     column_index = TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX # __find_header_index(sheet, header_name)
@@ -104,6 +129,8 @@ def apply_borders_to_all_teams(sheet, start_row, team_list):
         # Find the first and last row of the team members under the team leader
         team_leader_row, last_team_member_row = __find_first_and_last_team_member_rows(sheet, start_row, team_leader,
                                                                                        column_index)
+        if last_team_member_row is None:
+            continue
 
         # Apply border to the team table
         __apply_border_to_team_table(sheet, team_leader_row, last_team_member_row, column_index, 7)
@@ -135,6 +162,8 @@ def update_wb_vacation_team_members(sheet, start_row, team_list):
     for team_leader, team_members in team_list.items():
         # Find the first and last row of the team members under the team leader
         _, last_team_member_row = __find_first_and_last_team_member_rows(sheet, start_row, team_leader, column_index)
+        if last_team_member_row is None:
+            continue
 
         # Insert the team members who are on vacation after the last row of the team members
         for i, team_member in enumerate(team_members, start=1):
