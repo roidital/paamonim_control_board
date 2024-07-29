@@ -8,12 +8,17 @@ from src.common.constants import URL_ACTIVE_TEAM_MEMBERS, TEAMS_LIST_SHEET_NAME,
     ULR_VACATION_TEAM_MEMBERS, URL_FAMILIES_STATUS_PAGE, CHECK_MARK, FamilyStatus, LIGHT_BLUE_FILL, \
     TUTOR_COLUMN_IN_TEAMS_SHEET, READY_FAMILIES_SUM_COLUMN_DIFF, ACTIVE_FAMILIES_SUM_COLUMN_DIFF, \
     TEAMS_SHEET_NAME_HEADER_COLUMN_INDEX, ACTIVE_FAMILY_COUNT_COLUMN_SHIFT, ACTIVE_FAMILY_LIST_COLUMN_SHIFT, \
-    READY_FAMILY_COUNT_COLUMN_SHIFT, READY_FAMILY_LIST_COLUMN_SHIFT, PAGE_SELECTOR
+    READY_FAMILY_COUNT_COLUMN_SHIFT, READY_FAMILY_LIST_COLUMN_SHIFT, PAGE_SELECTOR, FAMILIES_SHEET_FIRST_ROW_NUM, \
+    FAMILIES_SHEET_NAME, FAMILIES_SHEET_FIRST_COLUMN_INDEX, FAMILIES_SHEET_LAST_COLUMN_INDEX
 from collections import defaultdict
 from openpyxl.styles import Font, Alignment, Color
 
+from src.create_families_sheet import retrieve_data_from_common_families_table, \
+    set_values_from_common_families_table_to_excel, write_family_alerts, browser_dispatcher, \
+    set_budget_and_balances_to_excel
 
-async def create_teams_list_sheet(browser, unit_name, wb):
+
+async def create_teams_list_sheet(browser, unit_name, wb, do_email_list_sheet, lock):
     active_team_list = await retrieve_team_list(browser, unit_name, URL_ACTIVE_TEAM_MEMBERS)
     if active_team_list is None:
         return None
@@ -31,8 +36,8 @@ async def create_teams_list_sheet(browser, unit_name, wb):
     # add vacation team members to the excel file
     update_wb_vacation_team_members(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, vacation_team_list)
 
-    tutor_to_families, team_leader_to_families = await collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
-                                                                        FamilyStatus.ACTIVE)
+    tutor_to_families, team_leader_to_families = await collect_families_data(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
+                                                                             FamilyStatus.ACTIVE, wb, do_email_list_sheet, lock)
     if tutor_to_families is None:
         return None
     # print(f'team_leader_to_families: {team_leader_to_families}')
@@ -41,11 +46,13 @@ async def create_teams_list_sheet(browser, unit_name, wb):
     update_wb_families_status(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, ACTIVE_FAMILY_COUNT_COLUMN_SHIFT,
                               ACTIVE_FAMILY_LIST_COLUMN_SHIFT, tutor_to_families)
 
-    tutor_to_ready_families, _ = await collect_tutor_families(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
-                                                        FamilyStatus.READY_TO_START)
+    tutor_to_ready_families, _ = await collect_families_data(browser, unit_name, URL_FAMILIES_STATUS_PAGE,
+                                                             FamilyStatus.READY_TO_START, wb, do_email_list_sheet, lock)
     if tutor_to_ready_families is None:
         return None
     print(f'ready to start families list: {tutor_to_ready_families}')
+
+    await browser.close()
 
     update_wb_families_status(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, READY_FAMILY_COUNT_COLUMN_SHIFT,
                               READY_FAMILY_LIST_COLUMN_SHIFT, tutor_to_ready_families)
@@ -104,7 +111,7 @@ async def retrieve_team_list(browser, unit_name, url_page, with_search_button=Fa
 async def change_inner_page(page, page_number, select_selector):
     # change the inner page to be shown in the table
     await page.select(select_selector, str(page_number))
-    sleep(2) # wait for table to be updated
+    sleep(6) # wait for table to be updated
 
 
 async def add_members_to_team_list(page, team_list, current_user):
@@ -172,7 +179,7 @@ def update_wb_vacation_team_members(sheet, start_row, team_list):
             set_cell_value(sheet.cell(row=last_team_member_row + i, column=column_index + 2), CHECK_MARK)
 
 
-async def collect_tutor_families(browser, unit_name, url_page, family_status):
+async def collect_families_data(browser, unit_name, url_page, family_status, wb, do_email_list_sheet, lock):
     page = await browser.newPage()
     await page.goto(url_page)
 
@@ -183,10 +190,48 @@ async def collect_tutor_families(browser, unit_name, url_page, family_status):
         print('### filter_unit_name_with_search_button FAILED')
         return None, None
 
-    active_families_list = defaultdict(lambda: [])
-    rows = await page.querySelectorAll('tr[id^="family_"]')
+    family_line_num = FAMILIES_SHEET_FIRST_ROW_NUM
+    # this method is collecting families data in favor of both sheets (teams and families)
+    active_families_list = defaultdict(lambda: []) # needed for the teams sheet
+    team_leader_to_families = defaultdict(lambda: []) # needed for the teams sheet
+    family_data_dict = defaultdict(lambda: []) # needed for the families sheet
 
-    team_leader_to_families = defaultdict(lambda: [])
+    # handle a table with multiple pages
+    sheet = wb[FAMILIES_SHEET_NAME]
+    select_selector = PAGE_SELECTOR
+    select_element = await page.querySelector(select_selector)
+    if select_element: # if select_element is found - it means there are multiple pages to this table
+        options = await page.querySelectorAll(f"{select_selector} > option")
+        # the page has 2 selectors with same name (one at the top and one at the bottom of the page
+        # so the query always counts all the options twice)
+        num_pages = len(options)/2
+        print(f"### table has {num_pages} inner pages")
+
+        for page_number in range(1, int(num_pages) + 1):
+            await change_inner_page(page, page_number, select_selector)
+            family_line_num = await collect_data_from_table_and_write_families_sheet(page, active_families_list, team_leader_to_families, family_line_num, family_data_dict, sheet, family_status)
+    else: # table has only one page
+        await collect_data_from_table_and_write_families_sheet(page, active_families_list, team_leader_to_families, family_line_num, family_data_dict, sheet, family_status)
+
+    await page.close()
+
+    # parallel execution: collect data from each family page
+    await browser_dispatcher(family_data_dict, browser, do_email_list_sheet, lock)
+    # print(f'### AFTER family_data_dict: {family_data_dict}')
+
+    for family_id in family_data_dict.keys():
+        set_budget_and_balances_to_excel(family_data_dict[family_id], sheet)
+
+    __apply_border_to_team_table(sheet, 1, family_line_num - 1,
+                                 FAMILIES_SHEET_FIRST_COLUMN_INDEX,
+                                 (FAMILIES_SHEET_LAST_COLUMN_INDEX-FAMILIES_SHEET_FIRST_COLUMN_INDEX))
+
+    return active_families_list, team_leader_to_families
+
+
+async def collect_data_from_table_and_write_families_sheet(page, active_families_list, team_leader_to_families, family_row_index, family_data_dict, sheet, family_status):
+    # collect data required for the teams sheet
+    rows = await page.querySelectorAll('tr[id^="family_"]')
     for row in rows:
         cells = await row.querySelectorAll('td')
         assigned_to = await page.evaluate('(element) => element.textContent', cells[TUTOR_COLUMN_IN_TEAMS_SHEET])
@@ -201,8 +246,18 @@ async def collect_tutor_families(browser, unit_name, url_page, family_status):
         families = active_families_list[assigned_to]
         active_families_list[assigned_to] = families + [(family_name, family_link)]
 
-    await page.close()
-    return active_families_list, team_leader_to_families
+        # collect (and write into sheet) data required for the families sheet
+        if family_status == FamilyStatus.ACTIVE:
+            # get the the family's id number (from html)
+            family_id = await (await row.getProperty('id')).jsonValue()
+            family_id = family_id.split('_')[1]
+            # print(f'### family_id: {family_id}')
+            await retrieve_data_from_common_families_table(page, row, family_id, family_data_dict)
+            family_data_dict[family_id]['line_num'] = family_row_index
+            set_values_from_common_families_table_to_excel(family_data_dict[family_id], sheet)
+            write_family_alerts(family_data_dict[family_id], sheet)
+            family_row_index += 1
+    return family_row_index
 
 
 def update_wb_families_status(sheet, start_row, family_count_column_shift, family_list_column_shift, tutor_to_families):

@@ -1,68 +1,67 @@
 import re
 import datetime
-from src.common.common_utils import filter_unit_name_with_search_button, set_cell_value, __apply_border_to_team_table
-from src.common.constants import URL_FAMILIES_STATUS_PAGE, YELLOW_FILL, \
+from src.common.common_utils import set_cell_value
+from src.common.constants import YELLOW_FILL, \
     FAMILIES_SHEET_FIRST_COLUMN_INDEX, FAMILIES_SHEET_LAST_COLUMN_INDEX, DAYS_WITHOUT_BUDGET_LIMIT, \
     BUDGET_AND_BALANCES_PAGE, FAMILY_NAME, UNIT_NAME, CITY, LAST_MEETING_DATE, NEXT_MEETING_DATE, LAST_SHIKUF_BITSUA, \
     LAST_OSH_STATS, TOTAL_DEBTS, MONTHLY_DEBTS_PAYMENT, UNSETTLED_DEBTS, BUDGET, CASE_AGE, NUM_OF_MEETINGS, \
     NUM_CANCELLED_MEETINGS, BUDGET_INCOME, BUDGET_EXPENSE, BUDGET_DIFF, MONTH_INCOME, MONTH_EXPENSE, LAST_MONTH_DIFF, \
     TUTOR, DAYS_WITHOUT_FIRST_MEETING_LIMIT, OSH_STATS_PAGE, CURRENT_MONTH_OSH, LAST_MONTH_OSH, MAIN_FAMILY_PAGE
-from collections import defaultdict
 import asyncio
 import aiofiles
 
 
-async def create_families_sheet(sheet, browser, start_row, team_leader_to_families, unit_name, do_email_list_sheet, lock):
-    # to reset the checkboxes checked by previous steps
-    page = await browser.newPage()
-    await page.goto(URL_FAMILIES_STATUS_PAGE)
-    unit_search = await filter_unit_name_with_search_button(page, unit_name)
-    if unit_search:
-        print('### filter_unit_name_with_search_button DONE')
-    else:
-        print('### filter_unit_name_with_search_button FAILED')
-        return None
-
-    #print(f'### team_leader_to_families: {team_leader_to_families}')
-
-    rows = await page.querySelectorAll('tr[id^="family_"]')
-
-    i = start_row
-    family_data_dict = defaultdict(lambda: [])
-    for (team_leader, families) in team_leader_to_families.items():
-        # for each family of this tutor search for the family name in the html and copy relevant fields to excel
-        for family in families:
-            # find the row in the html that contains the family name
-            for row in rows:
-                cells = await row.querySelectorAll('td')
-                cell0_value = await page.evaluate('(element) => element.textContent', cells[0])
-                #print(f'### cell0_value: {cell0_value} family: {family}')
-                if family in cell0_value:
-                    # get the the family's id number (from html)
-                    family_id = await (await row.getProperty('id')).jsonValue()
-                    family_id = family_id.split('_')[1]
-                    #print(f'### family_id: {family_id}')
-                    await retrieve_data_from_common_families_table(page, row, family_id, family_data_dict)
-                    family_data_dict[family_id]['line_num'] = i
-                    set_values_from_common_families_table_to_excel(family_data_dict[family_id], sheet)
-
-                    write_family_alerts(family_data_dict[family_id], sheet, i)
-                    i += 1
-                    break
-    await page.close()
-    # retrieve the budget and balances data for each family (parallel execution)
-    await browser_dispatcher(family_data_dict, browser, do_email_list_sheet, lock)
-    # print(f'### AFTER family_data_dict: {family_data_dict}')
-
-    for family_id in family_data_dict.keys():
-        set_budget_and_balances_to_excel(family_data_dict[family_id], sheet)
-
-    num_of_table_rows = i
-    __apply_border_to_team_table(sheet, 1, num_of_table_rows - 1,
-                                 FAMILIES_SHEET_FIRST_COLUMN_INDEX,
-                                 (FAMILIES_SHEET_LAST_COLUMN_INDEX-FAMILIES_SHEET_FIRST_COLUMN_INDEX))
-
-    return 1
+# async def create_families_sheet(sheet, browser, start_row, team_leader_to_families, unit_name, do_email_list_sheet, lock):
+#     # to reset the checkboxes checked by previous steps
+#     page = await browser.newPage()
+#     await page.goto(URL_FAMILIES_STATUS_PAGE)
+#     unit_search = await filter_unit_name_with_search_button(page, unit_name)
+#     if unit_search:
+#         print('### filter_unit_name_with_search_button DONE')
+#     else:
+#         print('### filter_unit_name_with_search_button FAILED')
+#         return None
+#
+#     #print(f'### team_leader_to_families: {team_leader_to_families}')
+#
+#     rows = await page.querySelectorAll('tr[id^="family_"]')
+#
+#     i = start_row
+#     family_data_dict = defaultdict(lambda: [])
+#     for (team_leader, families) in team_leader_to_families.items():
+#         # for each family of this tutor search for the family name in the html and copy relevant fields to excel
+#         for family in families:
+#             # find the row in the html that contains the family name
+#             for row in rows:
+#                 cells = await row.querySelectorAll('td')
+#                 cell0_value = await page.evaluate('(element) => element.textContent', cells[0])
+#                 #print(f'### cell0_value: {cell0_value} family: {family}')
+#                 if family in cell0_value:
+#                     # get the the family's id number (from html)
+#                     family_id = await (await row.getProperty('id')).jsonValue()
+#                     family_id = family_id.split('_')[1]
+#                     #print(f'### family_id: {family_id}')
+#                     await retrieve_data_from_common_families_table(page, row, family_id, family_data_dict)
+#                     family_data_dict[family_id]['line_num'] = i
+#                     set_values_from_common_families_table_to_excel(family_data_dict[family_id], sheet)
+#
+#                     write_family_alerts(family_data_dict[family_id], sheet, i)
+#                     i += 1
+#                     break
+#     await page.close()
+#     # retrieve the budget and balances data for each family (parallel execution)
+#     await browser_dispatcher(family_data_dict, browser, do_email_list_sheet, lock)
+#     # print(f'### AFTER family_data_dict: {family_data_dict}')
+#
+#     for family_id in family_data_dict.keys():
+#         set_budget_and_balances_to_excel(family_data_dict[family_id], sheet)
+#
+#     num_of_table_rows = i
+#     __apply_border_to_team_table(sheet, 1, num_of_table_rows - 1,
+#                                  FAMILIES_SHEET_FIRST_COLUMN_INDEX,
+#                                  (FAMILIES_SHEET_LAST_COLUMN_INDEX-FAMILIES_SHEET_FIRST_COLUMN_INDEX))
+#
+#     return 1
 
 
 # family_data_dict is an output parameter, a dictionary populated families data
@@ -188,7 +187,7 @@ async def browser_dispatcher(family_data_dict, browser, do_email_list_sheet, loc
         for page_content in pages_content:
             print(f'### page_content: {page_content}')
 
-    await browser.close()
+    # await browser.close()
 
 
 async def create_email_list_sheet(browser, family_id, lock):
@@ -296,7 +295,7 @@ async def fetch_family_data(browser, family_id, family_data_dict):
     return 'done with family_id: ' + family_id
 
 
-def write_family_alerts(family_data, sheet, row):
+def write_family_alerts(family_data, sheet):
     # print(f'### alerts. cells: {family_data}')
     alerts = []
     if not family_data[BUDGET] and int(family_data[CASE_AGE].split()[0]) > DAYS_WITHOUT_BUDGET_LIMIT:
@@ -326,6 +325,6 @@ def write_family_alerts(family_data, sheet, row):
     # concat all the alerts into one string with a new line separator
     alerts = '\n'.join(alerts)
     if alerts:
-        set_cell_value(sheet.cell(row=row, column=FAMILIES_SHEET_LAST_COLUMN_INDEX), alerts, fill=YELLOW_FILL, adjust_width=True, wrap_text=True)
+        set_cell_value(sheet.cell(row=family_data['line_num'], column=FAMILIES_SHEET_LAST_COLUMN_INDEX), alerts, fill=YELLOW_FILL, adjust_width=True, wrap_text=True)
 
     # print(f'### alerts for family {family_data[FAMILY_NAME]}: {alerts}')
