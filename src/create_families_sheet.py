@@ -298,7 +298,7 @@ async def fetch_family_data(browser, family_id, family_data_dict):
 def write_family_alerts(family_data, sheet):
     # print(f'### alerts. cells: {family_data}')
     alerts = []
-    if not family_data[BUDGET] and int(family_data[CASE_AGE].split()[0]) > DAYS_WITHOUT_BUDGET_LIMIT:
+    if not family_data[BUDGET].strip() and family_data[CASE_AGE].split() and int(family_data[CASE_AGE].split()[0]) > DAYS_WITHOUT_BUDGET_LIMIT:
         alerts.append("ליווי בן יותר מ-45 יום ועדיין ללא תקציב ")
     if not family_data[LAST_MEETING_DATE].strip():
         if int(family_data[CASE_AGE].split()[0]) > DAYS_WITHOUT_FIRST_MEETING_LIMIT:
@@ -316,10 +316,10 @@ def write_family_alerts(family_data, sheet):
     if not family_data[NEXT_MEETING_DATE].strip():
         alerts.append("לא נקבעה הפגישה הבאה")
     if MONTH_INCOME in family_data and BUDGET_INCOME in family_data:
-        if family_data[MONTH_INCOME] < float(family_data[BUDGET_INCOME]*0.75):
+        if family_data[MONTH_INCOME].strip() < float(family_data[BUDGET_INCOME].strip()*0.75):
             alerts.append("הכנסה חודשית נמוכה מ-75% מהתקציב החודשי")
     if MONTH_EXPENSE in family_data and BUDGET_EXPENSE in family_data:
-        if family_data[MONTH_EXPENSE] > float(family_data[BUDGET_EXPENSE]*1.3):
+        if family_data[MONTH_EXPENSE].strip() > float(family_data[BUDGET_EXPENSE].strip()*1.3):
             alerts.append("הוצאה חודשית גבוהה ביותר מ-30% מהתקציב החודשי")
 
     # concat all the alerts into one string with a new line separator
