@@ -222,6 +222,10 @@ async def collect_families_data(browser, unit_name, url_page, family_status, wb,
     for family_id in family_data_dict.keys():
         set_budget_and_balances_to_excel(family_data_dict[family_id], sheet)
 
+    # write alerts for each family
+    for family_id in family_data_dict.keys():
+        write_family_alerts(family_data_dict[family_id], sheet)
+
     __apply_border_to_team_table(sheet, 1, family_line_num - 1,
                                  FAMILIES_SHEET_FIRST_COLUMN_INDEX,
                                  (FAMILIES_SHEET_LAST_COLUMN_INDEX-FAMILIES_SHEET_FIRST_COLUMN_INDEX))
@@ -255,7 +259,6 @@ async def collect_data_from_table_and_write_families_sheet(page, active_families
             await retrieve_data_from_common_families_table(page, row, family_id, family_data_dict)
             family_data_dict[family_id]['line_num'] = family_row_index
             set_values_from_common_families_table_to_excel(family_data_dict[family_id], sheet)
-            write_family_alerts(family_data_dict[family_id], sheet)
             family_row_index += 1
     return family_row_index
 
