@@ -59,6 +59,6 @@ async def generate_auto_excel(username, password, unit_name):
 
 if __name__ == "__main__":
     current_day = datetime.now().day
-    if current_day == 1: # sends the excel file only if it's the first day of the month
+    if current_day == 30: # sends the excel file only on the 30th of each month (Todo: need to also add February handling)
         asyncio.run(fetch_all_users_details_from_db())
         
