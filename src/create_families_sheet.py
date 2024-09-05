@@ -74,7 +74,6 @@ async def retrieve_data_from_common_families_table(page, row, family_id, family_
     cell6_value = await page.evaluate('(element) => element.textContent', cells[6])
     cell7_value = await page.evaluate('(element) => element.textContent', cells[7])
     cell8_value = await page.evaluate('(element) => element.textContent', cells[8])
-    cell9_value = await page.evaluate('(element) => element.textContent', cells[9])
     cell10_value = await page.evaluate('(element) => element.textContent', cells[10])
     cell11_value = await page.evaluate('(element) => element.textContent', cells[11])
     cell12_value = await page.evaluate('(element) => element.textContent', cells[12])
@@ -91,7 +90,6 @@ async def retrieve_data_from_common_families_table(page, row, family_id, family_
                                        NEXT_MEETING_DATE: cell13_value,
                                        LAST_SHIKUF_BITSUA: cell7_value,
                                        LAST_OSH_STATS: cell15_value,
-                                       TOTAL_DEBTS: cell9_value,
                                        MONTHLY_DEBTS_PAYMENT: cell11_value,
                                        UNSETTLED_DEBTS: cell10_value,
                                        BUDGET: cell8_value,
@@ -178,7 +176,9 @@ async def browser_dispatcher(family_data_dict, browser, do_email_list_sheet, loc
     tasks = [fetch_family_data(browser, family_id, family_data_dict) for family_id in family_data_dict.keys()
              if family_data_dict[family_id]['last_shikuf_bitsua'].strip() != '']
     osh_tasks = [fetch_family_osh_data(browser, family_id, family_data_dict) for family_id in family_data_dict.keys()]
+    collect_debts_tasks = [collect_debts(browser, family_id, family_data_dict) for family_id in family_data_dict.keys()]
     tasks.extend(osh_tasks)
+    tasks.extend(collect_debts_tasks)
     if do_email_list_sheet:
         email_tasks = [create_email_list_sheet(browser, family_id, lock) for family_id in family_data_dict.keys()]
         tasks.extend(email_tasks)
@@ -215,6 +215,32 @@ async def create_email_list_sheet(browser, family_id, lock):
                 await email_file.write(email + '\n')
 
     return 'added email of family ' + family_id
+
+
+async def collect_debts(browser, family_id, family_data_dict):
+    page = await browser.newPage()
+    try:
+        await page.goto(MAIN_FAMILY_PAGE + family_id, waitUntil='domcontentloaded')
+    except:
+        print(f'### ERROR: family {family_id} got timedout while browsing to collect debts info')
+        await page.close()
+        return 'timeout while collecting debts info. family_id: ' + family_id
+
+    try:
+        # Retrieve the debts value from the table
+        debts_value = await page.evaluate('''() => {
+                    const tds = Array.from(document.querySelectorAll('table.tbl_updates td'));
+                    const td = tds.find(td => td.textContent.includes('חובות'));
+                    return td ? td.textContent.split(':')[1].trim() : null;
+                }''')
+        if debts_value:
+            # print(f'### debts_value for family {family_data_dict[family_id][FAMILY_NAME]} is: {debts_value}')
+            family_data_dict[family_id][TOTAL_DEBTS] = debts_value
+    except Exception as e:
+        print(f'### ERROR: family {family_id} encountered an error while retrieving debts info: {e}')
+    finally:
+        await page.close()
+    return 'done with debts info for family_id: ' + family_id
 
 
 async def fetch_family_osh_data(browser, family_id, family_data_dict):
