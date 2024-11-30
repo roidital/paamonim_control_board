@@ -22,7 +22,7 @@ async def create_teams_list_sheet(browser, unit_name, wb, do_email_list_sheet, l
     active_team_list = await retrieve_team_list(browser, unit_name, URL_ACTIVE_TEAM_MEMBERS)
     if active_team_list is None:
         return None
-    print(f'active team list: {active_team_list}')
+    # print(f'active team list: {active_team_list}')
 
     sheet = wb[TEAMS_LIST_SHEET_NAME]
     # add active team members to the excel file
@@ -31,7 +31,7 @@ async def create_teams_list_sheet(browser, unit_name, wb, do_email_list_sheet, l
     vacation_team_list = await retrieve_team_list(browser, unit_name, ULR_VACATION_TEAM_MEMBERS)
     if vacation_team_list is None:
         return None
-    print(f'vacation team list: {vacation_team_list}')
+    # print(f'vacation team list: {vacation_team_list}')
 
     # add vacation team members to the excel file
     update_wb_vacation_team_members(sheet, TEAM_LISTS_SHEET_FIRST_DATA_ROW_NUM, vacation_team_list)
@@ -50,7 +50,7 @@ async def create_teams_list_sheet(browser, unit_name, wb, do_email_list_sheet, l
                                                              FamilyStatus.READY_TO_START, wb, do_email_list_sheet, lock)
     if tutor_to_ready_families is None:
         return None
-    print(f'ready to start families list: {tutor_to_ready_families}')
+    # print(f'ready to start families list: {tutor_to_ready_families}')
 
     await browser.close()
 
@@ -74,9 +74,7 @@ async def retrieve_team_list(browser, unit_name, url_page, with_search_button=Fa
         await filter_unit_name_with_search_button(browser, unit_name, families_status)
     else:
         unit_search = await filter_unit_name_no_search_button(page, unit_name)
-        if unit_search:
-            print('### filter_unit_name_no_search_button DONE')
-        else:
+        if not unit_search:
             print('### filter_unit_name_no_search_button FAILED')
             return None
 
@@ -184,9 +182,7 @@ async def collect_families_data(browser, unit_name, url_page, family_status, wb,
     await page.goto(url_page)
 
     unit_search = await filter_unit_name_with_search_button(page, unit_name, family_status)
-    if unit_search:
-        print('### filter_unit_name_with_search_button DONE')
-    else:
+    if not unit_search:
         print('### filter_unit_name_with_search_button FAILED')
         return None, None
 
@@ -205,7 +201,7 @@ async def collect_families_data(browser, unit_name, url_page, family_status, wb,
         # the page has 2 selectors with same name (one at the top and one at the bottom of the page
         # so the query always counts all the options twice)
         num_pages = len(options)/2
-        print(f"### table has {num_pages} inner pages")
+        # print(f"### table has {num_pages} inner pages")
 
         for page_number in range(1, int(num_pages) + 1):
             await change_inner_page(page, page_number, select_selector)

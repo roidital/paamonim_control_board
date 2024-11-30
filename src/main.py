@@ -1,11 +1,23 @@
 import os
-import openpyxl
+import sys
+import asyncio
+import nest_asyncio
 
+# Add the project root directory to the PYTHONPATH
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(script_dir)
+sys.path.append(project_root)
+
+import openpyxl
+# from PyQt5.QtSql import userName, password
+
+from login.login import auto_login
 from src.common.common_utils import set_cell_value
 from src.common.constants import EXCEL_FILENAME, FAMILIES_SHEET_NAME, \
     URL_FAMILIES_STATUS_PAGE, FamilyStatus, YELLOW_FILL, BOLD_FONT, FAMILIES_SHEET_LAST_COLUMN_INDEX
 from src.create_teams_list_sheet import create_teams_list_sheet, collect_families_data
 
+nest_asyncio.apply()
 
 def init_workbook(excel_filename):
     # copy the template file to the new excel file
@@ -103,3 +115,30 @@ def restore_attributes_for_alerts_column(sheet, column_index):
             cell.fill = YELLOW_FILL
             cell.font = BOLD_FONT
             cell.alignment = openpyxl.styles.Alignment(wrap_text=True)
+
+
+async def local_main():
+    lock = asyncio.Lock()
+    # read username, password and unit_name from the command line
+    username = sys.argv[1]
+    password = sys.argv[2]
+    unit_name = sys.argv[3]
+    print(f"### Starting main username: {username}  password: {password}. unit_name: {unit_name}\n")
+    browser = await auto_login(username, password)
+    if not browser:
+        print("יוזר או סיסמא שגויים")
+        exit(1)
+    ret_value = await main(browser, unit_name, True, True, False, lock)
+    await browser.close()
+    if not ret_value:
+        print(f"היחידה שהזנת {unit_name} לא נמצאה, אנא וודא/י שהקלדת נכון ללא רווחים וסימני פיסוק")
+        exit(1)
+    # print("הפעולה הסתיימה בהצלחה")
+
+    # file_path = os.path.join(os.getcwd(), 'cockpit.xlsx')
+    # save_workbook(wb, file_path)
+    # print(f"Excel file created successfully at: {file_path}")
+
+
+if __name__ == "__main__":
+    asyncio.run(local_main())

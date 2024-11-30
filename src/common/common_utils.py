@@ -53,7 +53,7 @@ async def filter_unit_name_no_search_button(page, unit_name):
     try:
         option = await page.waitForXPath(f'//div[@class="betterselecter-op" and contains(text(), "{unit_name}")]',
                                          {'visible': True})
-        print("### Found the option")
+        # print("### Found the option")
         await option.click()
     except:
         print(f'### ERROR: unit name: {unit_name} not found')
@@ -85,7 +85,7 @@ async def filter_unit_name_with_search_button(page, unit_name, families_status =
     try:
         option = await page.waitForXPath(f'//div[@class="betterselecter-op" and contains(text(), "{unit_name}")]',
                                          {'visible': True})
-        print("### Found the option")
+        # print("### Found the option")
         await option.click()
     except:
         print(f'### ERROR: unit name: {unit_name} not found')
