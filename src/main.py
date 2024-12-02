@@ -2,6 +2,7 @@ import os
 import sys
 import asyncio
 import nest_asyncio
+import platform
 
 # Add the project root directory to the PYTHONPATH
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -23,10 +24,19 @@ def init_workbook(excel_filename):
     # copy the template file to the new excel file
     script_dir = os.path.dirname(os.path.abspath(__file__))  # Directory of the script
     project_root = os.path.dirname(script_dir)  # Project root directory
-    os.system(f'cp -f {project_root}/cockpit_template.xlsx {script_dir}/{excel_filename}')
-
-    # check if prev command ended successfully
-    excel_path = script_dir+'/'+excel_filename
+    
+    system = platform.system()
+    if system == "Windows":
+        os.system(f'copy /y "{project_root}\\cockpit_template.xlsx" "{script_dir}\\{excel_filename}"')
+        excel_path = script_dir+'\\'+excel_filename
+    elif system == "Linux":
+        os.system(f'cp -f {project_root}/cockpit_template.xlsx {script_dir}/{excel_filename}')
+        excel_path = script_dir+'/'+excel_filename
+    else:
+        print("### ERROR: your OS is not supported, currently only Windows and Linux are supported by this app")
+        exit(1)
+    
+    # check if copy command ended successfully
     if not os.path.exists(excel_path):
         print("Error copying the template file")
         exit(1)
@@ -75,7 +85,7 @@ async def main(browser, unit_name, do_teams_list_sheet, do_families_sheet, do_em
     sort_sheet_by_column(sheet, 1)
 
     save_workbook(wb)
-    print(f'### DONE')
+    print(f'### DONE. Your output file cockpit.xlsx was successfully created here - in current directory')
     return True
 
 

@@ -1,10 +1,12 @@
 from typing import Final
 from pyppeteer import launch
-
+import winreg
+import os
+import shutil
 from src.common.constants import MAIN_LOGIN_URL
 
-CRED_FILE: Final[str] = "paamonim_cred.txt"
-LOGIN_URL: Final[str] = 'https://app.paamonim.org.il'
+# CRED_FILE: Final[str] = "paamonim_cred.txt"
+# LOGIN_URL: Final[str] = 'https://app.paamonim.org.il'
 
 
 # def _do_login(username, password):
@@ -66,6 +68,40 @@ LOGIN_URL: Final[str] = 'https://app.paamonim.org.il'
 #         print("login failed")
 #         browser.quit()
 #         return None
+
+
+
+def find_chrome_path():
+    # Common locations for Chrome on Windows
+    potential_paths = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    ]
+    for path in potential_paths:
+        if os.path.exists(path):
+            return path
+            
+    # Fallback to checking system PATH
+    chrome_path = shutil.which("chrome")
+    
+    if chrome_path:
+        return chrome_path
+            
+    try:
+        # Open the registry key where Chrome's path is stored
+        reg_key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe"
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, reg_key) as key:
+            # Read the default value, which contains the path to Chrome
+            chrome_path, _ = winreg.QueryValueEx(key, None)
+            if os.path.exists(chrome_path):
+                return chrome_path
+            print("ERROR: could not find the path of your Chrome browser, please make sure Google Chrome is installed on your computer")
+            exit(1)
+            
+    except FileNotFoundError:
+        raise FileNotFoundError("ERROR: Google Chrome executable not found in the registry. Please ensure it is installed.")
+
+
 async def auto_login(username, password):
     options = {
         'ignoreHTTPSErrors': True,
@@ -77,7 +113,10 @@ async def auto_login(username, password):
         'handleSIGHUP': False
     }
     # browser = await launch(options=options)
-    browser= await launch(options={'args': ['--no-sandbox']})
+    
+    chrome_path = find_chrome_path()
+    print(f'### Launching chrome from here: {chrome_path}')
+    browser= await launch(options={'args': ['--no-sandbox'], 'executablePath': chrome_path})
     page = await browser.newPage()
 
     # navigate to the login page
